@@ -1,0 +1,17 @@
+/node_modules
+/.next
+/out
+.env
+.env.local
+.env*.local
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# raw data & work artifacts (contain customer PII — never push)
+Customer Data - Purchase Order.csv
+products_report.csv
+review_phone_merges.csv
+Review Data Customer - Treelogy.xlsx
+review.html
+openapijubelio.md
