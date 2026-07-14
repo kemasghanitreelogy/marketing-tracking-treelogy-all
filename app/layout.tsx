@@ -14,7 +14,7 @@ const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t){d
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="id" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
