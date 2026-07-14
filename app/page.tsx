@@ -5,6 +5,7 @@ import { AreaTrend, BarList, StackedMonths } from "@/components/charts";
 import { DeltaKpi, InsightCards } from "@/components/cmo";
 import { CohortHeatmap, SegmentBars, Pareto } from "@/components/cmo-charts";
 import ThemeToggle from "@/components/ThemeToggle";
+import TopCustomersTable from "@/components/customer-modal";
 
 export const revalidate = 300;
 
@@ -229,34 +230,11 @@ export default async function Page() {
         </Card>
       </section>
 
-      {/* Top customers */}
+      {/* Top customers — click a row for the Customer 360 modal */}
       <section className="mt-4">
         <Card>
-          <SectionTitle title="Top Customers by Value" hint="by GMV" />
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[0.66rem] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-                  <th className="pb-2 font-semibold">Name</th>
-                  <th className="pb-2 font-semibold">Channel</th>
-                  <th className="pb-2 text-right font-semibold">Orders</th>
-                  <th className="pb-2 text-right font-semibold">Units</th>
-                  <th className="pb-2 text-right font-semibold">GMV</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topCust.map((c) => (
-                  <tr key={c.unified_customer_id} className="border-b last:border-0 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
-                    <td className="py-2 pr-2 font-medium">{c.name || "—"}</td>
-                    <td className="py-2 pr-2"><span className="flex flex-wrap gap-1">{(c.channels ?? []).map((ch) => (<span key={ch} className="rounded px-1.5 py-0.5 text-[0.6rem] font-semibold" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>{ch}</span>))}</span></td>
-                    <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(c.orders)}</td>
-                    <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(c.units)}</td>
-                    <td className="py-2 text-right font-mono font-semibold tnum">{idr(c.revenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <SectionTitle title="Top Customers by Value" hint="by GMV · click a row for full detail" />
+          <TopCustomersTable rows={topCust} />
         </Card>
       </section>
 
