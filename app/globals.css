@@ -14,6 +14,8 @@
   --brand-ink: #2c5c39;
   --brand-wash: #ebf3ec;
   --accent: #b27a16;
+  --good: #2e7d46;
+  --bad: #c0392b;
   --grid: rgba(27, 36, 28, 0.06);
 }
 :root[data-theme="dark"] {
@@ -28,6 +30,8 @@
   --brand-ink: #8fcf9f;
   --brand-wash: #17251a;
   --accent: #d6a94e;
+  --good: #6ddf8f;
+  --bad: #ef6a5a;
   --grid: rgba(255, 255, 255, 0.06);
 }
 @media (prefers-color-scheme: dark) {
@@ -43,6 +47,8 @@
     --brand-ink: #8fcf9f;
     --brand-wash: #17251a;
     --accent: #d6a94e;
+    --good: #6ddf8f;
+    --bad: #ef6a5a;
     --grid: rgba(255, 255, 255, 0.06);
   }
 }
