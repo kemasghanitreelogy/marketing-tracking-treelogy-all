@@ -37,7 +37,7 @@ export default async function Page() {
     sb<Ltv[]>("cmo_ltv_channel"),
     sb<Affinity[]>("cmo_affinity?order=together.desc&limit=6"),
     sb<DqRow[]>("dq_scoreboard?select=check_key,score"),
-    sb<GeoRow[]>("cmo_geo?province=neq.Unknown&order=gmv.desc"),
+    sb<GeoRow[]>("cmo_geo?order=gmv.desc"),
     sb<TimeCell[]>("cmo_time_heatmap"),
     sb<SeasonCell[]>("cmo_product_season"),
   ]);
@@ -47,6 +47,8 @@ export default async function Page() {
   const totalGmv = channels.reduce((s, c) => s + Number(c.gmv), 0);
   const repeatCur = k.act_cur ? Math.round((1 - k.new_cur / k.act_cur) * 100) : 0;
   const repeatPrev = k.act_prev ? Math.round((1 - k.new_prev / k.act_prev) * 100) : 0;
+  const geoKnown = geo.filter((g) => g.province !== "Unknown");
+  const geoUnknownShare = Number(geo.find((g) => g.province === "Unknown")?.gmv_share ?? 0);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:px-6">
@@ -140,16 +142,16 @@ export default async function Page() {
       <section className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <SectionTitle title="GMV by Region" hint="tile map of Indonesia · hover for detail" />
-          <GeoTileMap rows={geo} />
+          <GeoTileMap rows={geoKnown} unknownShare={geoUnknownShare} />
         </Card>
         <Card className="lg:col-span-2">
           <SectionTitle title="Top Regions" hint="GMV share" />
           <div className="flex flex-col gap-2">
-            {geo.slice(0, 8).map((g) => (
+            {geoKnown.slice(0, 8).map((g) => (
               <div key={g.province} className="flex items-center gap-2 text-sm">
                 <div className="w-32 shrink-0 truncate font-medium">{g.province}</div>
                 <div className="relative h-4 flex-1 overflow-hidden rounded" style={{ background: "var(--line-soft)" }}>
-                  <div className="h-full rounded" style={{ width: `${Math.min(100, (Number(g.gmv_share) / Number(geo[0]?.gmv_share || 1)) * 100)}%`, background: "var(--brand)", opacity: 0.85 }} />
+                  <div className="h-full rounded" style={{ width: `${Math.min(100, (Number(g.gmv_share) / Number(geoKnown[0]?.gmv_share || 1)) * 100)}%`, background: "var(--brand)", opacity: 0.85 }} />
                 </div>
                 <div className="w-24 shrink-0 whitespace-nowrap text-right font-mono text-xs tnum">{idr(g.gmv)} · {g.gmv_share}%</div>
               </div>

@@ -5,6 +5,17 @@
 import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { useTip, TipBox, TipTitle, TipRow } from "@/components/tooltip";
 
+// Small low→high gradient legend (accessibility: label the scale)
+export function HeatLegend({ label = "orders" }: { label?: string }) {
+  return (
+    <div className="mt-2 flex items-center gap-2 text-[0.62rem]" style={{ color: "var(--ink-soft)" }}>
+      <span>low</span>
+      <div className="h-2 w-24 rounded-full" style={{ background: "linear-gradient(to right, var(--line-soft), color-mix(in srgb, var(--brand) 100%, var(--line-soft)))" }} />
+      <span>high {label}</span>
+    </div>
+  );
+}
+
 // intensity 0..1 → brand-mix background, readable ink
 function heat(a: number) {
   const pct = Math.round(Math.max(0.05, Math.min(1, a)) * 100);
@@ -38,7 +49,7 @@ const TILES: Record<string, { c: number; r: number; s: string }> = {
 };
 export type GeoRow = { province: string; orders: number; units: number; gmv: string; customers: number; gmv_share: number };
 
-export function GeoTileMap({ rows }: { rows: GeoRow[] }) {
+export function GeoTileMap({ rows, unknownShare = 0 }: { rows: GeoRow[]; unknownShare?: number }) {
   const { ref, tip, show, hide } = useTip();
   const byProv = new Map(rows.map((r) => [r.province, r]));
   const known = rows.filter((r) => TILES[r.province]);
@@ -75,6 +86,12 @@ export function GeoTileMap({ rows }: { rows: GeoRow[] }) {
           );
         })}
       </svg>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+        <HeatLegend label="GMV" />
+        <span className="text-[0.62rem]" style={{ color: "var(--ink-soft)" }}>
+          {unknownShare > 0 ? `${(100 - unknownShare).toFixed(1)}% of GMV geolocated · ${unknownShare}% unmapped excluded` : "all orders geolocated"}
+        </span>
+      </div>
       <TipBox tip={tip} />
     </div>
   );
@@ -124,11 +141,14 @@ export function TimeHeatmap({ cells }: { cells: TimeCell[] }) {
           ))}
         </tbody>
       </table>
-      {peak && (
-        <div className="mt-2 text-xs" style={{ color: "var(--ink-soft)" }}>
-          Peak: <b style={{ color: "var(--brand)" }}>{DAYS[peak.dow - 1]} {String(peak.hr).padStart(2, "0")}:00 WIB</b> ({num(peak.orders)} orders) — best slot for flash sales & ad pushes.
-        </div>
-      )}
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        {peak && (
+          <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+            Peak: <b style={{ color: "var(--brand)" }}>{DAYS[peak.dow - 1]} {String(peak.hr).padStart(2, "0")}:00 WIB</b> ({num(peak.orders)} orders) — best slot for flash sales & ad pushes.
+          </span>
+        )}
+        <HeatLegend />
+      </div>
       <TipBox tip={tip} />
     </div>
   );
@@ -151,7 +171,11 @@ export function SeasonHeatmap({ cells }: { cells: SeasonCell[] }) {
         <thead>
           <tr>
             <th />
-            {months.map((m) => <th key={m} className="pb-1 font-semibold" style={{ color: "var(--ink-soft)" }}>{monthLabel(m)}</th>)}
+            {months.map((m, i) => (
+              <th key={m} className="pb-1 font-semibold" style={{ color: "var(--ink-soft)" }}>
+                {monthLabel(m)}{i === months.length - 1 ? "✱" : ""}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -183,7 +207,7 @@ export function SeasonHeatmap({ cells }: { cells: SeasonCell[] }) {
         </tbody>
       </table>
       <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>
-        Color intensity is relative to each product&apos;s own peak month — read rows to spot seasonality.
+        Color intensity is relative to each product&apos;s own peak month — read rows to spot seasonality. ✱ latest month is month-to-date (partial).
       </div>
       <TipBox tip={tip} />
     </div>
