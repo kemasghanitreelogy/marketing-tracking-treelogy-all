@@ -6,6 +6,7 @@ import { DeltaKpi, InsightCards } from "@/components/cmo";
 import { CohortHeatmap, SegmentBars, Pareto } from "@/components/cmo-charts";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopCustomersTable from "@/components/customer-modal";
+import { GeoTileMap, TimeHeatmap, SeasonHeatmap, type GeoRow, type TimeCell, type SeasonCell } from "@/components/heatmaps";
 
 export const revalidate = 300;
 
@@ -23,7 +24,7 @@ type Affinity = { p1: string; p2: string; together: number; lift: number; attach
 type DqRow = { check_key: string; score: string };
 
 export default async function Page() {
-  const [kpiA, monthly, channels, cohort, segments, pareto, topCust, insights, runrateA, ltv, affinity, dq] = await Promise.all([
+  const [kpiA, monthly, channels, cohort, segments, pareto, topCust, insights, runrateA, ltv, affinity, dq, geo, timeCells, season] = await Promise.all([
     sb<Kpi[]>("cmo_kpi"),
     sb<Monthly[]>("cmo_monthly?order=ym.asc"),
     sb<Channel[]>("cmo_channel"),
@@ -36,6 +37,9 @@ export default async function Page() {
     sb<Ltv[]>("cmo_ltv_channel"),
     sb<Affinity[]>("cmo_affinity?order=together.desc&limit=6"),
     sb<DqRow[]>("dq_scoreboard?select=check_key,score"),
+    sb<GeoRow[]>("cmo_geo?province=neq.Unknown&order=gmv.desc"),
+    sb<TimeCell[]>("cmo_time_heatmap"),
+    sb<SeasonCell[]>("cmo_product_season"),
   ]);
   const k = kpiA[0];
   const rr = runrateA[0];
@@ -128,6 +132,40 @@ export default async function Page() {
         <Card>
           <SectionTitle title="Cohort Retention" hint="% of customers ordering again, by months since acquisition (M0–M6)" />
           <CohortHeatmap rows={cohort} />
+        </Card>
+      </section>
+
+      {/* Advanced tracking: geo + purchase time + seasonality */}
+      <div className="mb-2 mt-6 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Advanced Tracking</div>
+      <section className="grid gap-4 lg:grid-cols-5">
+        <Card className="lg:col-span-3">
+          <SectionTitle title="GMV by Region" hint="tile map of Indonesia · hover for detail" />
+          <GeoTileMap rows={geo} />
+        </Card>
+        <Card className="lg:col-span-2">
+          <SectionTitle title="Top Regions" hint="GMV share" />
+          <div className="flex flex-col gap-2">
+            {geo.slice(0, 8).map((g) => (
+              <div key={g.province} className="flex items-center gap-2 text-sm">
+                <div className="w-32 shrink-0 truncate font-medium">{g.province}</div>
+                <div className="relative h-4 flex-1 overflow-hidden rounded" style={{ background: "var(--line-soft)" }}>
+                  <div className="h-full rounded" style={{ width: `${Math.min(100, (Number(g.gmv_share) / Number(geo[0]?.gmv_share || 1)) * 100)}%`, background: "var(--brand)", opacity: 0.85 }} />
+                </div>
+                <div className="w-24 shrink-0 whitespace-nowrap text-right font-mono text-xs tnum">{idr(g.gmv)} · {g.gmv_share}%</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <SectionTitle title="Purchase Time Heatmap" hint="orders by day × hour (WIB) · Apr 2026 onward" />
+          <TimeHeatmap cells={timeCells} />
+        </Card>
+        <Card>
+          <SectionTitle title="Product Seasonality" hint="units by month · intensity relative to each product's peak" />
+          <SeasonHeatmap cells={season} />
         </Card>
       </section>
 
