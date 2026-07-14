@@ -66,7 +66,7 @@ export default async function Page() {
           <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6) }))} />
         </Card>
         <Card>
-          <SectionTitle title="Mix Channel" hint="% GMV" />
+          <SectionTitle title="Mix Channel" hint="GMV (Rp)" />
           <BarList rows={channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
         </Card>
       </section>

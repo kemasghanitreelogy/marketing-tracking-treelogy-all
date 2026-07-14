@@ -49,7 +49,7 @@ export function BarList({ rows, mode = "num" }: { rows: { name: string; value: n
           <div className="relative h-6 flex-1 overflow-hidden rounded-md" style={{ background: "var(--line-soft)" }}>
             <div className="h-full rounded-md" style={{ width: `${(r.value / max) * 100}%`, background: "var(--brand)", opacity: 0.85 }} />
           </div>
-          <div className="w-20 shrink-0 text-right font-mono text-sm tnum" style={{ color: "var(--ink)" }}>
+          <div className="w-24 shrink-0 whitespace-nowrap text-right font-mono text-sm tnum" style={{ color: "var(--ink)" }}>
             {mode === "idr" ? idr(r.value) : num(r.value)}
           </div>
         </div>

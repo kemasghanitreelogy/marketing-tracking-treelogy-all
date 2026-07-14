@@ -17,14 +17,13 @@ export function DeltaKpi({ label, value, cur, prev, invert = false, mono = true 
   const good = invert ? !up : up;
   const color = good ? "var(--good)" : "var(--bad)";
   return (
-    <Card className="!p-4">
+    <Card className="!p-4 min-h-[120px]">
       <div className="text-[0.68rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>{label}</div>
-      <div className={`mt-1.5 text-[1.7rem] font-bold leading-none tnum ${mono ? "font-mono" : ""}`}>{value}</div>
-      <div className="mt-2 flex items-center gap-1 text-xs font-semibold" style={{ color }}>
-        <Arrow up={up} />
-        <span className="tnum">{up ? "+" : ""}{d.toFixed(1)}%</span>
-        <span className="font-normal" style={{ color: "var(--ink-soft)" }}>vs 30h sebelumnya</span>
+      <div className={`mt-2 whitespace-nowrap text-[1.45rem] font-bold leading-none tnum ${mono ? "font-mono" : ""}`}>{value}</div>
+      <div className="mt-2.5 flex items-center gap-1 whitespace-nowrap text-xs font-semibold tnum" style={{ color }}>
+        <Arrow up={up} /><span>{up ? "+" : ""}{d.toFixed(1)}%</span>
       </div>
+      <div className="mt-0.5 text-[0.62rem]" style={{ color: "var(--ink-soft)" }}>vs 30 hari sebelumnya</div>
     </Card>
   );
 }
