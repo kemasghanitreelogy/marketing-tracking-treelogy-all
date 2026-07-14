@@ -10,10 +10,8 @@ type Kpis = { total_orders: number; canceled_orders: number; total_units: number
 type Channel = { platform: string; orders: number; units: number; revenue: string; customers: number };
 type Daily = { order_date: string; orders: number; units: number; revenue: string };
 type Product = { sku: string; product_name: string; units: number; orders: number };
-type TopCust = { unified_customer_id: number; name: string; sources: string[]; orders: number; units: number; revenue: string };
+type TopCust = { unified_customer_id: number; name: string; channels: string[]; orders: number; units: number; revenue: string };
 type NR = { ym: string; new_customers: number; returning_customers: number; orders: number };
-
-const SRC_LABEL: Record<string, string> = { csv: "Historis", jubelio: "Jubelio", shopify: "Shopify" };
 
 export default async function Page() {
   const [kpiArr, channels, daily, products, topCust, nr] = await Promise.all([
@@ -133,8 +131,8 @@ export default async function Page() {
                     <td className="py-2 pr-2 font-medium">{c.name || "—"}</td>
                     <td className="py-2 pr-2">
                       <span className="flex flex-wrap gap-1">
-                        {c.sources.map((s) => (
-                          <span key={s} className="rounded px-1.5 py-0.5 text-[0.6rem] font-semibold" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>{SRC_LABEL[s] ?? s}</span>
+                        {(c.channels ?? []).map((ch) => (
+                          <span key={ch} className="rounded px-1.5 py-0.5 text-[0.6rem] font-semibold" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>{ch}</span>
                         ))}
                       </span>
                     </td>
