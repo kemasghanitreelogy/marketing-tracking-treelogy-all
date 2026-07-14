@@ -106,6 +106,32 @@ export function SegmentBars({ rows }: { rows: Seg[] }) {
   );
 }
 
+// Automated insights — ranked findings with severity stripe
+const SEV: Record<string, { color: string; label: string }> = {
+  bad: { color: "var(--bad)", label: "Perlu aksi" },
+  warn: { color: "var(--accent)", label: "Perhatian" },
+  good: { color: "var(--good)", label: "Sehat" },
+  info: { color: "#2F6DB0", label: "Info" },
+};
+export function InsightCards({ rows }: { rows: { severity: string; title: string; detail: string | null }[] }) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {rows.map((r, i) => {
+        const s = SEV[r.severity] ?? SEV.info;
+        return (
+          <div key={i} className="rounded-xl border p-4" style={{ background: "var(--surface)", borderColor: "var(--line)", borderLeft: `4px solid ${s.color}` }}>
+            <div className="mb-1 flex items-center gap-2">
+              <span className="rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide" style={{ background: `color-mix(in srgb, ${s.color} 15%, transparent)`, color: s.color }}>{s.label}</span>
+            </div>
+            <div className="text-[0.92rem] font-bold leading-snug">{r.title}</div>
+            {r.detail && <div className="mt-1 text-xs leading-relaxed" style={{ color: "var(--ink-soft)" }}>{r.detail}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Pareto: GMV bars + cumulative % line
 type P = { product_name: string; gmv: string; units: number; cum_gmv_pct: number };
 export function Pareto({ rows }: { rows: P[] }) {

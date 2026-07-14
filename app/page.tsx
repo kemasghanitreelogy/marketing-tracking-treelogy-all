@@ -2,7 +2,7 @@ import { sb } from "@/lib/supabase";
 import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
 import { AreaTrend, BarList, StackedMonths } from "@/components/charts";
-import { DeltaKpi, CohortHeatmap, SegmentBars, Pareto } from "@/components/cmo";
+import { DeltaKpi, CohortHeatmap, SegmentBars, Pareto, InsightCards } from "@/components/cmo";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const revalidate = 300;
@@ -14,9 +14,14 @@ type Cohort = { cohort: string; months_since: number; retention_pct: number; coh
 type Segment = { segment: string; customers: number; gmv: string; gmv_share: number; avg_orders: number; avg_recency_days: number };
 type ParetoRow = { product_name: string; gmv: string; units: number; cum_gmv_pct: number };
 type TopCust = { unified_customer_id: number; name: string; channels: string[]; orders: number; units: number; revenue: string };
+type Insight = { severity: string; title: string; detail: string | null };
+type Runrate = { mtd_gmv: string; days_elapsed: number; days_in_month: number; projected_gmv: string; prev_month_gmv: string };
+type Ltv = { first_channel: string; customers: number; avg_ltv: string; median_ltv: string; avg_orders: number };
+type Affinity = { p1: string; p2: string; together: number; lift: number; attach_pct: number };
+type DqRow = { check_key: string; score: string };
 
 export default async function Page() {
-  const [kpiA, monthly, channels, cohort, segments, pareto, topCust] = await Promise.all([
+  const [kpiA, monthly, channels, cohort, segments, pareto, topCust, insights, runrateA, ltv, affinity, dq] = await Promise.all([
     sb<Kpi[]>("cmo_kpi"),
     sb<Monthly[]>("cmo_monthly?order=ym.asc"),
     sb<Channel[]>("cmo_channel"),
@@ -24,8 +29,15 @@ export default async function Page() {
     sb<Segment[]>("cmo_segments"),
     sb<ParetoRow[]>("cmo_product_pareto?order=gmv.desc&limit=12"),
     sb<TopCust[]>("dash_top_customers?order=revenue.desc&limit=10"),
+    sb<Insight[]>("cmo_insights"),
+    sb<Runrate[]>("cmo_runrate"),
+    sb<Ltv[]>("cmo_ltv_channel"),
+    sb<Affinity[]>("cmo_affinity?order=together.desc&limit=6"),
+    sb<DqRow[]>("dq_scoreboard?select=check_key,score"),
   ]);
   const k = kpiA[0];
+  const rr = runrateA[0];
+  const dqScore = dq.length ? Math.min(...dq.map((d) => Number(d.score))) : null;
   const totalGmv = channels.reduce((s, c) => s + Number(c.gmv), 0);
   const repeatCur = k.act_cur ? Math.round((1 - k.new_cur / k.act_cur) * 100) : 0;
   const repeatPrev = k.act_prev ? Math.round((1 - k.new_prev / k.act_prev) * 100) : 0;
@@ -40,6 +52,12 @@ export default async function Page() {
           <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-[1.7rem]">Ringkasan Keputusan CMO</h1>
         </div>
         <div className="flex items-center gap-3">
+          {dqScore !== null && (
+            <span className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: "var(--line)", color: dqScore >= 99 ? "var(--good)" : "var(--accent)" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>
+              Data Quality {dqScore}
+            </span>
+          )}
           <span className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "var(--brand)" }} /><span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} /></span>
             Live · {k.last_date}
@@ -47,6 +65,12 @@ export default async function Page() {
           <ThemeToggle />
         </div>
       </header>
+
+      {/* Automated insights — the "so what" first */}
+      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Insight Otomatis</div>
+      <section className="mb-6">
+        <InsightCards rows={insights} />
+      </section>
 
       {/* Executive KPIs — rolling 30 days vs prior 30 days */}
       <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Kinerja 30 hari terakhir</div>
@@ -64,6 +88,12 @@ export default async function Page() {
         <Card className="lg:col-span-2">
           <SectionTitle title="Pertumbuhan GMV" hint="juta Rp · per bulan (aktual + estimasi historis)" />
           <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6) }))} />
+          {rr && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
+              <span className="font-semibold">Proyeksi bulan ini: {idr(rr.projected_gmv)}</span>
+              <span style={{ color: "var(--ink-soft)" }}>MTD {idr(rr.mtd_gmv)} · hari {rr.days_elapsed}/{rr.days_in_month} · bln lalu {idr(rr.prev_month_gmv)}</span>
+            </div>
+          )}
         </Card>
         <Card>
           <SectionTitle title="Mix Channel" hint="GMV (Rp)" />
@@ -146,6 +176,55 @@ export default async function Page() {
         <Card>
           <SectionTitle title="Konsentrasi Produk (Pareto)" hint="bar = GMV · garis = kumulatif %" />
           <Pareto rows={pareto} />
+        </Card>
+      </section>
+
+      {/* LTV per acquisition channel + basket affinity */}
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <SectionTitle title="LTV per Channel Akuisisi" hint="nilai seumur-hidup pelanggan berdasar channel pertama" />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[0.66rem] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
+                  <th className="pb-2 font-semibold">Channel</th>
+                  <th className="pb-2 text-right font-semibold">Pelanggan</th>
+                  <th className="pb-2 text-right font-semibold">Rata² LTV</th>
+                  <th className="pb-2 text-right font-semibold">Median</th>
+                  <th className="pb-2 text-right font-semibold">Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ltv.map((r) => (
+                  <tr key={r.first_channel} className="border-b last:border-0" style={{ borderColor: "var(--line-soft)" }}>
+                    <td className="py-2 font-medium">{r.first_channel}</td>
+                    <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(r.customers)}</td>
+                    <td className="py-2 text-right font-mono font-semibold tnum">{idr(r.avg_ltv)}</td>
+                    <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{idr(r.median_ltv)}</td>
+                    <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{r.avg_orders}×</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+        <Card>
+          <SectionTitle title="Sering Dibeli Bersama" hint="peluang bundling & cross-sell" />
+          <div className="flex flex-col gap-2.5">
+            {affinity.map((a, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2" style={{ borderColor: "var(--line-soft)" }}>
+                <div className="min-w-0 text-sm">
+                  <span className="font-semibold">{a.p1}</span>
+                  <span style={{ color: "var(--ink-soft)" }}> + </span>
+                  <span className="font-semibold">{a.p2}</span>
+                </div>
+                <div className="shrink-0 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>
+                  {num(a.together)}× <span className="font-semibold" style={{ color: "var(--brand)" }}>lift {a.lift}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>lift &gt; 1 = kombinasi lebih sering dari kebetulan — kandidat bundle</div>
         </Card>
       </section>
 
