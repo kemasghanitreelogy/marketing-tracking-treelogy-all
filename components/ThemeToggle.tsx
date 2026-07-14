@@ -22,7 +22,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      aria-label={dark ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       className="grid h-9 w-9 place-items-center rounded-lg border transition-colors cursor-pointer hover:bg-[var(--surface-2)]"
       style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}
     >

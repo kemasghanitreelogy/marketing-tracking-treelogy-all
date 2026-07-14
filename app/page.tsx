@@ -2,7 +2,8 @@ import { sb } from "@/lib/supabase";
 import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
 import { AreaTrend, BarList, StackedMonths } from "@/components/charts";
-import { DeltaKpi, CohortHeatmap, SegmentBars, Pareto, InsightCards } from "@/components/cmo";
+import { DeltaKpi, InsightCards } from "@/components/cmo";
+import { CohortHeatmap, SegmentBars, Pareto } from "@/components/cmo-charts";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const revalidate = 300;
@@ -10,7 +11,7 @@ export const revalidate = 300;
 type Kpi = { gmv_cur: number; gmv_prev: number; ord_cur: number; ord_prev: number; act_cur: number; act_prev: number; new_cur: number; new_prev: number; aov_cur: number; aov_prev: number; last_date: string };
 type Monthly = { ym: string; orders: number; units: number; gmv: string; aov: string; active_customers: number; new_customers: number; returning_customers: number };
 type Channel = { channel: string; orders: number; units: number; gmv: string; aov: string; customers: number; gmv_share: number };
-type Cohort = { cohort: string; months_since: number; retention_pct: number; cohort_size: number };
+type Cohort = { cohort: string; months_since: number; retention_pct: number; retained: number; cohort_size: number };
 type Segment = { segment: string; customers: number; gmv: string; gmv_share: number; avg_orders: number; avg_recency_days: number };
 type ParetoRow = { product_name: string; gmv: string; units: number; cum_gmv_pct: number };
 type TopCust = { unified_customer_id: number; name: string; channels: string[]; orders: number; units: number; revenue: string };
@@ -49,7 +50,7 @@ export default async function Page() {
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--brand-ink)" }}>
             <span style={{ color: "var(--brand)" }}>❦</span> Treelogy · Executive Marketing Dashboard
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-[1.7rem]">Ringkasan Keputusan CMO</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-[1.7rem]">CMO Decision Summary</h1>
         </div>
         <div className="flex items-center gap-3">
           {dqScore !== null && (
@@ -67,36 +68,36 @@ export default async function Page() {
       </header>
 
       {/* Automated insights — the "so what" first */}
-      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Insight Otomatis</div>
+      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Automated Insights</div>
       <section className="mb-6">
         <InsightCards rows={insights} />
       </section>
 
       {/* Executive KPIs — rolling 30 days vs prior 30 days */}
-      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Kinerja 30 hari terakhir</div>
+      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Last 30 Days Performance</div>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <DeltaKpi label="GMV" value={idr(k.gmv_cur)} cur={k.gmv_cur} prev={k.gmv_prev} />
-        <DeltaKpi label="Order" value={num(k.ord_cur)} cur={k.ord_cur} prev={k.ord_prev} />
+        <DeltaKpi label="Orders" value={num(k.ord_cur)} cur={k.ord_cur} prev={k.ord_prev} />
         <DeltaKpi label="AOV" value={idr(k.aov_cur)} cur={k.aov_cur} prev={k.aov_prev} />
-        <DeltaKpi label="Pelanggan Baru" value={num(k.new_cur)} cur={k.new_cur} prev={k.new_prev} />
-        <DeltaKpi label="Pelanggan Aktif" value={num(k.act_cur)} cur={k.act_cur} prev={k.act_prev} />
+        <DeltaKpi label="New Customers" value={num(k.new_cur)} cur={k.new_cur} prev={k.new_prev} />
+        <DeltaKpi label="Active Customers" value={num(k.act_cur)} cur={k.act_cur} prev={k.act_prev} />
         <DeltaKpi label="Repeat Rate" value={`${repeatCur}%`} cur={repeatCur} prev={repeatPrev} />
       </section>
 
       {/* Growth: GMV + channel mix */}
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <SectionTitle title="Pertumbuhan GMV" hint="juta Rp · per bulan (aktual + estimasi historis)" />
-          <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6) }))} />
+          <SectionTitle title="GMV Growth" hint="IDR millions · monthly (actual + historical estimates)" />
+          <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6), display: idrFull(m.gmv) }))} />
           {rr && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
-              <span className="font-semibold">Proyeksi bulan ini: {idr(rr.projected_gmv)}</span>
-              <span style={{ color: "var(--ink-soft)" }}>MTD {idr(rr.mtd_gmv)} · hari {rr.days_elapsed}/{rr.days_in_month} · bln lalu {idr(rr.prev_month_gmv)}</span>
+              <span className="font-semibold">Projected this month: {idr(rr.projected_gmv)}</span>
+              <span style={{ color: "var(--ink-soft)" }}>MTD {idr(rr.mtd_gmv)} · day {rr.days_elapsed}/{rr.days_in_month} · last month {idr(rr.prev_month_gmv)}</span>
             </div>
           )}
         </Card>
         <Card>
-          <SectionTitle title="Mix Channel" hint="GMV (Rp)" />
+          <SectionTitle title="Channel Mix" hint="GMV (IDR)" />
           <BarList rows={channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
         </Card>
       </section>
@@ -104,42 +105,42 @@ export default async function Page() {
       {/* Acquisition & Retention */}
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <SectionTitle title="Akuisisi vs Retensi" hint="pelanggan aktif per bulan" />
+          <SectionTitle title="Acquisition vs Retention" hint="active customers per month" />
           <div className="mb-3 flex gap-4 text-xs" style={{ color: "var(--ink-soft)" }}>
-            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--accent)" }} /> Baru</span>
-            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--brand)" }} /> Kembali</span>
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--accent)" }} /> New</span>
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--brand)" }} /> Returning</span>
           </div>
           <StackedMonths data={monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
         </Card>
         <Card>
-          <SectionTitle title="AOV per Bulan" hint="Rp" />
-          <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3) }))} />
-          <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>ribu Rp per order</div>
+          <SectionTitle title="AOV by Month" hint="IDR" />
+          <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
+          <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>IDR thousands per order</div>
         </Card>
       </section>
 
       {/* Cohort retention */}
       <section className="mt-4">
         <Card>
-          <SectionTitle title="Cohort Retention" hint="% pelanggan yang order lagi, per bulan sejak akuisisi (M0–M6)" />
-          <CohortHeatmap rows={cohort} monthLabel={monthLabel} />
+          <SectionTitle title="Cohort Retention" hint="% of customers ordering again, by months since acquisition (M0–M6)" />
+          <CohortHeatmap rows={cohort} />
         </Card>
       </section>
 
       {/* RFM segments */}
       <section className="mt-4 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <SectionTitle title="Segmentasi Pelanggan (RFM)" hint="berdasar Recency · Frequency · Monetary" />
+          <SectionTitle title="Customer Segments (RFM)" hint="by Recency · Frequency · Monetary" />
           <SegmentBars rows={segments} />
         </Card>
         <Card className="lg:col-span-2">
-          <SectionTitle title="Aksi per Segmen" hint="rekomendasi" />
+          <SectionTitle title="Actions per Segment" hint="recommendations" />
           <ul className="flex flex-col gap-2.5 text-sm" style={{ color: "var(--ink)" }}>
-            <li className="flex gap-2"><span style={{ color: "var(--good)" }}>▲</span> <span><b>Champions</b> — reward & referral; jaga dengan early-access.</span></li>
-            <li className="flex gap-2"><span style={{ color: "var(--brand)" }}>◆</span> <span><b>Loyal</b> — upsell bundle & subscription.</span></li>
-            <li className="flex gap-2"><span style={{ color: "var(--accent)" }}>●</span> <span><b>Needs Attention / At Risk</b> — win-back: reminder + diskon terarah.</span></li>
+            <li className="flex gap-2"><span style={{ color: "var(--good)" }}>▲</span> <span><b>Champions</b> — reward & referral; retain with early access.</span></li>
+            <li className="flex gap-2"><span style={{ color: "var(--brand)" }}>◆</span> <span><b>Loyal</b> — upsell bundles & subscriptions.</span></li>
+            <li className="flex gap-2"><span style={{ color: "var(--accent)" }}>●</span> <span><b>Needs Attention / At Risk</b> — win-back: reminders + targeted discounts.</span></li>
             <li className="flex gap-2"><span style={{ color: "#4FA3A3" }}>✦</span> <span><b>New / Promising</b> — onboarding & second-order nudge.</span></li>
-            <li className="flex gap-2"><span style={{ color: "#8A7BA8" }}>◇</span> <span><b>Hibernating</b> — reaktivasi hemat biaya atau lepas.</span></li>
+            <li className="flex gap-2"><span style={{ color: "#8A7BA8" }}>◇</span> <span><b>Hibernating</b> — low-cost reactivation or let go.</span></li>
           </ul>
         </Card>
       </section>
@@ -147,13 +148,13 @@ export default async function Page() {
       {/* Channel performance matrix + Pareto */}
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <SectionTitle title="Kinerja Channel" hint="GMV · AOV · pelanggan" />
+          <SectionTitle title="Channel Performance" hint="GMV · AOV · customers" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[0.66rem] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
                   <th className="pb-2 font-semibold">Channel</th>
-                  <th className="pb-2 text-right font-semibold">Order</th>
+                  <th className="pb-2 text-right font-semibold">Orders</th>
                   <th className="pb-2 text-right font-semibold">GMV</th>
                   <th className="pb-2 text-right font-semibold">AOV</th>
                   <th className="pb-2 text-right font-semibold">Share</th>
@@ -161,7 +162,7 @@ export default async function Page() {
               </thead>
               <tbody>
                 {channels.map((c) => (
-                  <tr key={c.channel} className="border-b last:border-0" style={{ borderColor: "var(--line-soft)" }}>
+                  <tr key={c.channel} className="border-b last:border-0 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
                     <td className="py-2 font-medium">{c.channel}</td>
                     <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(c.orders)}</td>
                     <td className="py-2 text-right font-mono tnum">{idr(c.gmv)}</td>
@@ -174,7 +175,7 @@ export default async function Page() {
           </div>
         </Card>
         <Card>
-          <SectionTitle title="Konsentrasi Produk (Pareto)" hint="bar = GMV · garis = kumulatif %" />
+          <SectionTitle title="Product Concentration (Pareto)" hint="bars = GMV · line = cumulative %" />
           <Pareto rows={pareto} />
         </Card>
       </section>
@@ -182,21 +183,21 @@ export default async function Page() {
       {/* LTV per acquisition channel + basket affinity */}
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <SectionTitle title="LTV per Channel Akuisisi" hint="nilai seumur-hidup pelanggan berdasar channel pertama" />
+          <SectionTitle title="LTV by Acquisition Channel" hint="customer lifetime value by first channel" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[0.66rem] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
                   <th className="pb-2 font-semibold">Channel</th>
-                  <th className="pb-2 text-right font-semibold">Pelanggan</th>
-                  <th className="pb-2 text-right font-semibold">Rata² LTV</th>
+                  <th className="pb-2 text-right font-semibold">Customers</th>
+                  <th className="pb-2 text-right font-semibold">Avg LTV</th>
                   <th className="pb-2 text-right font-semibold">Median</th>
-                  <th className="pb-2 text-right font-semibold">Order</th>
+                  <th className="pb-2 text-right font-semibold">Orders</th>
                 </tr>
               </thead>
               <tbody>
                 {ltv.map((r) => (
-                  <tr key={r.first_channel} className="border-b last:border-0" style={{ borderColor: "var(--line-soft)" }}>
+                  <tr key={r.first_channel} className="border-b last:border-0 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
                     <td className="py-2 font-medium">{r.first_channel}</td>
                     <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(r.customers)}</td>
                     <td className="py-2 text-right font-mono font-semibold tnum">{idr(r.avg_ltv)}</td>
@@ -209,10 +210,10 @@ export default async function Page() {
           </div>
         </Card>
         <Card>
-          <SectionTitle title="Sering Dibeli Bersama" hint="peluang bundling & cross-sell" />
+          <SectionTitle title="Frequently Bought Together" hint="bundling & cross-sell opportunities" />
           <div className="flex flex-col gap-2.5">
             {affinity.map((a, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2" style={{ borderColor: "var(--line-soft)" }}>
+              <div key={i} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
                 <div className="min-w-0 text-sm">
                   <span className="font-semibold">{a.p1}</span>
                   <span style={{ color: "var(--ink-soft)" }}> + </span>
@@ -224,28 +225,28 @@ export default async function Page() {
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>lift &gt; 1 = kombinasi lebih sering dari kebetulan — kandidat bundle</div>
+          <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>lift &gt; 1 = pairing occurs more often than chance — bundle candidates</div>
         </Card>
       </section>
 
       {/* Top customers */}
       <section className="mt-4">
         <Card>
-          <SectionTitle title="Pelanggan Bernilai Tertinggi" hint="berdasar GMV" />
+          <SectionTitle title="Top Customers by Value" hint="by GMV" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[0.66rem] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-                  <th className="pb-2 font-semibold">Nama</th>
+                  <th className="pb-2 font-semibold">Name</th>
                   <th className="pb-2 font-semibold">Channel</th>
-                  <th className="pb-2 text-right font-semibold">Order</th>
-                  <th className="pb-2 text-right font-semibold">Unit</th>
+                  <th className="pb-2 text-right font-semibold">Orders</th>
+                  <th className="pb-2 text-right font-semibold">Units</th>
                   <th className="pb-2 text-right font-semibold">GMV</th>
                 </tr>
               </thead>
               <tbody>
                 {topCust.map((c) => (
-                  <tr key={c.unified_customer_id} className="border-b last:border-0" style={{ borderColor: "var(--line-soft)" }}>
+                  <tr key={c.unified_customer_id} className="border-b last:border-0 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
                     <td className="py-2 pr-2 font-medium">{c.name || "—"}</td>
                     <td className="py-2 pr-2"><span className="flex flex-wrap gap-1">{(c.channels ?? []).map((ch) => (<span key={ch} className="rounded px-1.5 py-0.5 text-[0.6rem] font-semibold" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>{ch}</span>))}</span></td>
                     <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(c.orders)}</td>
@@ -260,7 +261,7 @@ export default async function Page() {
       </section>
 
       <footer className="mt-8 border-t pt-5 text-center text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
-        GMV total {idrFull(totalGmv)} (aktual + estimasi harga per-SKU untuk periode historis) · data tersatukan CSV + Jubelio (realtime) + Shopify
+        Total GMV {idrFull(totalGmv)} (actual + per-SKU price estimates for historical periods) · unified data: historical CSV + Jubelio (realtime webhook) + Shopify
       </footer>
     </main>
   );

@@ -7,14 +7,14 @@ const mono = Fira_Code({ subsets: ["latin"], weight: ["400", "500", "600"], vari
 
 export const metadata: Metadata = {
   title: "Treelogy · Sales Tracking",
-  description: "Dashboard penjualan omnichannel Treelogy — Shopee, Tokopedia, Shopify, offline.",
+  description: "Treelogy omnichannel sales dashboard — Shopee, Tokopedia, Shopify, offline.",
 };
 
 const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
