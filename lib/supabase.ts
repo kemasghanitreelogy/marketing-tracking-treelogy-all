@@ -1,12 +1,16 @@
 const URL = process.env.SUPABASE_URL ?? "";
 const KEY = process.env.SUPABASE_SERVICE_KEY ?? "";
 
+// Bump when RPC output text/shape changes: the header is part of the Next data-cache
+// key, so all stale per-filter-combo entries are invalidated at once on deploy.
+const PAYLOAD_V = "3";
+
 // POST an RPC (PostgREST). Cached per (fn, args) combo via the Next data cache,
 // so repeat channel-filter toggles are served instantly; fresh data every 5 min.
 export async function sbRpc<T = unknown>(fn: string, args: Record<string, unknown> = {}, revalidate = 300): Promise<T> {
   const res = await fetch(`${URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
-    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", "x-payload-v": PAYLOAD_V },
     body: JSON.stringify(args),
     next: { revalidate },
   });
