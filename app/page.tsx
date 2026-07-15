@@ -3,7 +3,8 @@ import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
 import { AreaTrend, BarList, StackedMonths } from "@/components/charts";
 import { DeltaKpi, InsightCards } from "@/components/cmo";
-import { CohortHeatmap, SegmentBars, Pareto } from "@/components/cmo-charts";
+import { CohortHeatmap, Pareto } from "@/components/cmo-charts";
+import SegmentPanel from "@/components/segments";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopCustomersTable from "@/components/customer-modal";
 import { GeoTileMap, TimeHeatmap, SeasonHeatmap } from "@/components/heatmaps";
@@ -133,7 +134,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         </Card>
         <Card>
           <SectionTitle title="AOV by Month" hint="IDR" />
-          <AreaTrend data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
+          <AreaTrend h={400} data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
           <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>IDR thousands per order</div>
         </Card>
       </section>
@@ -155,14 +156,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         </Card>
         <Card className="lg:col-span-2">
           <SectionTitle title="Top Regions" hint="GMV share" />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3.5">
             {geoKnown.slice(0, 8).map((g) => (
-              <div key={g.province} className="flex items-center gap-2 text-sm">
-                <div className="w-32 shrink-0 truncate font-medium">{g.province}</div>
-                <div className="relative h-4 flex-1 overflow-hidden rounded" style={{ background: "var(--line-soft)" }}>
-                  <div className="h-full rounded" style={{ width: `${Math.min(100, (Number(g.gmv_share) / Number(geoKnown[0]?.gmv_share || 1)) * 100)}%`, background: "var(--brand)", opacity: 0.85 }} />
+              <div key={g.province}>
+                <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                  <span className="truncate font-medium">{g.province}</span>
+                  <span className="shrink-0 whitespace-nowrap font-mono text-xs tnum">
+                    {idr(g.gmv)} <span style={{ color: "var(--ink-soft)" }}>· {g.gmv_share}%</span>
+                  </span>
                 </div>
-                <div className="w-24 shrink-0 whitespace-nowrap text-right font-mono text-xs tnum">{idr(g.gmv)} · {g.gmv_share}%</div>
+                <div className="relative h-2.5 overflow-hidden rounded-full" style={{ background: "var(--line-soft)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, (Number(g.gmv_share) / Number(geoKnown[0]?.gmv_share || 1)) * 100)}%`, background: "var(--brand)", opacity: 0.85 }} />
+                </div>
               </div>
             ))}
           </div>
@@ -183,8 +188,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* RFM segments */}
       <section className="mt-4 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <SectionTitle title="Customer Segments (RFM)" hint="by Recency · Frequency · Monetary" />
-          <SegmentBars rows={p.segments} />
+          <SectionTitle title="Customer Segments (RFM)" hint="by Recency · Frequency · Monetary · click a segment to explore & export" />
+          <SegmentPanel rows={p.segments} ch={channelsSel.join(",")} />
         </Card>
         <Card className="lg:col-span-2">
           <SectionTitle title="Actions per Segment" hint="recommendations" />

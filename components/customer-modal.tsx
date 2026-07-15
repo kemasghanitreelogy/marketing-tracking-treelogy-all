@@ -31,7 +31,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Modal({ uid, name, onClose }: { uid: number; name: string; onClose: () => void }) {
+export function Customer360Modal({ uid, name, onClose }: { uid: number; name: string; onClose: () => void }) {
   const [data, setData] = useState<C360 | null>(cache.get(uid) ?? null);
   const [error, setError] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -205,7 +205,7 @@ export default function TopCustomersTable({ rows }: { rows: Row[] }) {
           </tbody>
         </table>
       </div>
-      {open && <Modal uid={open.uid} name={open.name} onClose={() => setOpen(null)} />}
+      {open && <Customer360Modal uid={open.uid} name={open.name} onClose={() => setOpen(null)} />}
     </>
   );
 }

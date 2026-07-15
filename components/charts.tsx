@@ -13,9 +13,9 @@ function svgX(e: PointerEvent<SVGSVGElement>, viewW: number) {
   return ((e.clientX - r.left) / r.width) * viewW;
 }
 
-export function AreaTrend({ data, unit = "" }: { data: Pt[]; unit?: string }) {
+export function AreaTrend({ data, unit = "", h = 220 }: { data: Pt[]; unit?: string; h?: number }) {
   const { ref, tip, show, hide } = useTip();
-  const W = 720, H = 220, pad = { t: 14, r: 12, b: 26, l: 44 };
+  const W = 720, H = h, pad = { t: 14, r: 12, b: 26, l: 44 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const max = Math.max(1, ...data.map((d) => d.value));
   const x = (i: number) => pad.l + (data.length <= 1 ? 0 : (i / (data.length - 1)) * iw);
