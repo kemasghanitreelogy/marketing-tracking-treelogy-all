@@ -85,7 +85,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         Automated Insights{channelsSel.length ? ` · ${channelsSel.join(" + ")}` : ""}
       </div>
       <section className="mb-6">
-        <InsightCards rows={p.insights} />
+        <InsightCards rows={p.insights ?? []} />
       </section>
 
       {/* Executive KPIs — rolling 30 days vs prior 30 days */}
