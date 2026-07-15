@@ -9,6 +9,12 @@ import ThemeToggle from "@/components/ThemeToggle";
 import TopCustomersTable from "@/components/customer-modal";
 import { GeoTileMap, TimeHeatmap, SeasonHeatmap } from "@/components/heatmaps";
 import ChannelFilter from "@/components/channel-filter";
+import GetInsight from "@/components/get-insight";
+import {
+  trendInsights, channelInsights, acqInsights, aovInsights, cohortInsights,
+  geoInsights, timeInsights, seasonInsights, segmentInsights, paretoInsights,
+  ltvInsights, affinityInsights, topCustInsights,
+} from "@/lib/insights";
 
 type Kpi = { gmv_cur: number; gmv_prev: number; ord_cur: number; ord_prev: number; act_cur: number; act_prev: number; new_cur: number; new_prev: number; aov_cur: number; aov_prev: number; last_date: string };
 type Payload = {
@@ -29,11 +35,18 @@ type Payload = {
 };
 type DqRow = { check_key: string; score: string };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string }> }) {
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string; from?: string; to?: string }> }) {
   const sp = await searchParams;
   // canonical (sorted) order → same combo always hits the same cache entry
   const channelsSel = (sp.ch ?? "").split(",").map((s) => s.trim()).filter(Boolean).sort();
-  const rpcArgs = channelsSel.length ? { p_channels: channelsSel } : {};
+  const from = DATE_RE.test(sp.from ?? "") ? sp.from! : null;
+  const to = DATE_RE.test(sp.to ?? "") ? sp.to! : null;
+  const rpcArgs: Record<string, unknown> = {};
+  if (channelsSel.length) rpcArgs.p_channels = channelsSel;
+  if (from) rpcArgs.p_from = from;
+  if (to) rpcArgs.p_to = to;
 
   let [p, dq, chanList] = await Promise.all([
     sbRpc<Payload>("dash_payload", rpcArgs),
@@ -52,6 +65,24 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
   const geoKnown = p.geo.filter((g) => g.province !== "Unknown");
   const geoUnknownShare = Number(p.geo.find((g) => g.province === "Unknown")?.gmv_share ?? 0);
   const allChannels = chanList.map((c) => c.channel);
+  const periodLabel = from || to ? `${from ?? "start"} → ${to ?? "today"}` : "";
+
+  // per-section insights, computed from the SAME filtered payload the charts render
+  const ins = {
+    trend: trendInsights(p.monthly, rr ?? null),
+    channel: channelInsights(p.channels),
+    acq: acqInsights(p.monthly),
+    aov: aovInsights(p.monthly),
+    cohort: cohortInsights(p.cohort),
+    geo: geoInsights(geoKnown, geoUnknownShare),
+    time: timeInsights(p.time_heatmap),
+    season: seasonInsights(p.season),
+    seg: segmentInsights(p.segments),
+    pareto: paretoInsights(p.pareto),
+    ltv: ltvInsights(p.ltv),
+    aff: affinityInsights(p.affinity),
+    top: topCustInsights(p.top_customers, totalGmv),
+  };
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:px-6">
@@ -94,7 +125,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       </section>
 
       {/* Executive KPIs — rolling 30 days vs prior 30 days */}
-      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Last 30 Days Performance</div>
+      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
+        Last 30 Days Performance{periodLabel ? ` · ending ${k.last_date}` : ""}
+      </div>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <DeltaKpi label="GMV" value={idr(k.gmv_cur)} cur={k.gmv_cur} prev={k.gmv_prev} />
         <DeltaKpi label="Orders" value={num(k.ord_cur)} cur={k.ord_cur} prev={k.ord_prev} />
@@ -108,6 +141,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <SectionTitle title="GMV Growth" hint="IDR millions · monthly (actual + historical estimates)" />
+          <GetInsight points={ins.trend} />
           <AreaTrend data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6), display: idrFull(m.gmv) }))} />
           {rr && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
@@ -118,6 +152,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         </Card>
         <Card>
           <SectionTitle title="Channel Mix" hint="GMV (IDR)" />
+          <GetInsight points={ins.channel} />
           <BarList rows={p.channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
         </Card>
       </section>
@@ -126,6 +161,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <SectionTitle title="Acquisition vs Retention" hint="active customers per month" />
+          <GetInsight points={ins.acq} />
           <div className="mb-3 flex gap-4 text-xs" style={{ color: "var(--ink-soft)" }}>
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--accent)" }} /> New</span>
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--brand)" }} /> Returning</span>
@@ -134,6 +170,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         </Card>
         <Card>
           <SectionTitle title="AOV by Month" hint="IDR" />
+          <GetInsight points={ins.aov} />
           <AreaTrend h={400} data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
           <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>IDR thousands per order</div>
         </Card>
@@ -143,6 +180,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4">
         <Card>
           <SectionTitle title="Cohort Retention" hint="% of customers ordering again, by months since acquisition (M0–M6)" />
+          <GetInsight points={ins.cohort} />
           <CohortHeatmap rows={p.cohort} />
         </Card>
       </section>
@@ -152,6 +190,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <SectionTitle title="GMV by Region" hint="tile map of Indonesia · hover for detail" />
+          <GetInsight points={ins.geo} />
           <GeoTileMap rows={geoKnown} unknownShare={geoUnknownShare} />
         </Card>
         <Card className="lg:col-span-2">
@@ -177,10 +216,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <SectionTitle title="Purchase Time Heatmap" hint="orders by day × hour (WIB) · Apr 2026 onward" />
+          <GetInsight points={ins.time} />
           <TimeHeatmap cells={p.time_heatmap} />
         </Card>
         <Card>
           <SectionTitle title="Product Seasonality" hint="units by month · intensity relative to each product's peak" />
+          <GetInsight points={ins.season} />
           <SeasonHeatmap cells={p.season} />
         </Card>
       </section>
@@ -189,7 +230,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <SectionTitle title="Customer Segments (RFM)" hint="by Recency · Frequency · Monetary · click a segment to explore & export" />
-          <SegmentPanel rows={p.segments} ch={channelsSel.join(",")} />
+          <GetInsight points={ins.seg} />
+          <SegmentPanel rows={p.segments} ch={channelsSel.join(",")} from={from ?? ""} to={to ?? ""} />
         </Card>
         <Card className="lg:col-span-2">
           <SectionTitle title="Actions per Segment" hint="recommendations" />
@@ -207,6 +249,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <SectionTitle title="Channel Performance" hint="GMV · AOV · customers" />
+          <GetInsight points={ins.channel} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -234,6 +277,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         </Card>
         <Card>
           <SectionTitle title="Product Concentration (Pareto)" hint="bars = GMV · line = cumulative %" />
+          <GetInsight points={ins.pareto} />
           <Pareto rows={p.pareto} />
         </Card>
       </section>
@@ -242,6 +286,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <SectionTitle title="LTV by Acquisition Channel" hint="customer lifetime value by first channel" />
+          <GetInsight points={ins.ltv} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -269,6 +314,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         </Card>
         <Card>
           <SectionTitle title="Frequently Bought Together" hint="bundling & cross-sell opportunities" />
+          <GetInsight points={ins.aff} />
           <div className="flex flex-col gap-2.5">
             {p.affinity.map((a, i) => (
               <div key={i} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
@@ -291,12 +337,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="mt-4">
         <Card>
           <SectionTitle title="Top Customers by Value" hint="by GMV · click a row for full detail" />
+          <GetInsight points={ins.top} />
           <TopCustomersTable rows={p.top_customers} />
         </Card>
       </section>
 
       <footer className="mt-8 border-t pt-5 text-center text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
-        {channelsSel.length ? `Filtered: ${channelsSel.join(" + ")} · ` : ""}Total GMV {idrFull(totalGmv)} (actual + per-SKU price estimates for historical periods) · unified data: historical CSV + Jubelio (realtime webhook) + Shopify
+        {channelsSel.length ? `Filtered: ${channelsSel.join(" + ")} · ` : ""}{periodLabel ? `Period: ${periodLabel} · ` : ""}Total GMV {idrFull(totalGmv)} (actual + per-SKU price estimates for historical periods) · unified data: historical CSV + Jubelio (realtime webhook) + Shopify
       </footer>
     </main>
   );

@@ -37,8 +37,8 @@ function toCsv(rows: Member[]) {
   )].join("\n");
 }
 
-function SegmentModal({ seg, ch, onClose }: { seg: Seg; ch: string; onClose: () => void }) {
-  const key = `${seg.segment}|${ch}`;
+function SegmentModal({ seg, ch, from, to, onClose }: { seg: Seg; ch: string; from: string; to: string; onClose: () => void }) {
+  const key = `${seg.segment}|${ch}|${from}|${to}`;
   const [data, setData] = useState<Drill | null>(cache.get(key) ?? null);
   const [error, setError] = useState(false);
   const [cust, setCust] = useState<{ uid: number; name: string } | null>(null);
@@ -57,12 +57,12 @@ function SegmentModal({ seg, ch, onClose }: { seg: Seg; ch: string; onClose: () 
   useEffect(() => {
     if (cache.has(key)) return;
     let alive = true;
-    fetch(`/api/segment?seg=${encodeURIComponent(seg.segment)}${ch ? `&ch=${encodeURIComponent(ch)}` : ""}`)
+    fetch(`/api/segment?seg=${encodeURIComponent(seg.segment)}${ch ? `&ch=${encodeURIComponent(ch)}` : ""}${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d: Drill) => { cache.set(key, d); if (alive) setData(d); })
       .catch(() => alive && setError(true));
     return () => { alive = false; };
-  }, [key, seg.segment, ch]);
+  }, [key, seg.segment, ch, from, to]);
 
   function exportCsv() {
     if (!data) return;
@@ -90,6 +90,7 @@ function SegmentModal({ seg, ch, onClose }: { seg: Seg; ch: string; onClose: () 
                 <span className="rounded px-2 py-0.5 font-mono text-[0.65rem] font-bold tnum"
                   style={{ background: `color-mix(in srgb, ${col} 15%, transparent)`, color: col }}>{num(seg.customers)} customers</span>
                 {ch && <span className="rounded px-2 py-0.5 text-[0.62rem] font-semibold" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>{ch.split(",").join(" + ")}</span>}
+                {(from || to) && <span className="rounded px-2 py-0.5 font-mono text-[0.62rem] font-semibold tnum" style={{ background: "var(--line-soft)", color: "var(--ink-soft)" }}>{from || "start"} → {to || "today"}</span>}
               </div>
               {def && <div className="mt-1.5 text-xs leading-relaxed" style={{ color: "var(--ink-soft)" }}><b style={{ color: "var(--ink)" }}>Who:</b> {def.rule} <b style={{ color: "var(--ink)" }}>Play:</b> {def.action}</div>}
             </div>
@@ -182,7 +183,7 @@ function SegmentModal({ seg, ch, onClose }: { seg: Seg; ch: string; onClose: () 
   );
 }
 
-export default function SegmentPanel({ rows, ch }: { rows: Seg[]; ch: string }) {
+export default function SegmentPanel({ rows, ch, from = "", to = "" }: { rows: Seg[]; ch: string; from?: string; to?: string }) {
   const { ref, tip, show, hide } = useTip();
   const [open, setOpen] = useState<Seg | null>(null);
   const max = Math.max(1, ...rows.map((r) => Number(r.gmv_share)));
@@ -223,7 +224,7 @@ export default function SegmentPanel({ rows, ch }: { rows: Seg[]; ch: string }) 
         );
       })}
       <TipBox tip={tip} />
-      {open && <SegmentModal seg={open} ch={ch} onClose={() => setOpen(null)} />}
+      {open && <SegmentModal seg={open} ch={ch} from={from} to={to} onClose={() => setOpen(null)} />}
     </div>
   );
 }
