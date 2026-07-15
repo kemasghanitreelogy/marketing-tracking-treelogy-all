@@ -14,7 +14,9 @@ export default function ChannelFilter({ channels }: { channels: string[] }) {
   const activeAll = selected.size === 0;
 
   function apply(next: Set<string>) {
-    const qs = next.size === 0 || next.size === channels.length ? "" : `?ch=${[...next].join(",")}`;
+    // canonical order → one URL (and one server cache entry) per combo
+    const list = channels.filter((c) => next.has(c));
+    const qs = list.length === 0 || list.length === channels.length ? "" : `?ch=${list.join(",")}`;
     startTransition(() => router.replace(`/${qs}`, { scroll: false }));
   }
   function toggle(ch: string) {

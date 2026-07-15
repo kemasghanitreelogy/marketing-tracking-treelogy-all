@@ -30,13 +30,17 @@ type DqRow = { check_key: string; score: string };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string }> }) {
   const sp = await searchParams;
-  const channelsSel = (sp.ch ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  // canonical (sorted) order → same combo always hits the same cache entry
+  const channelsSel = (sp.ch ?? "").split(",").map((s) => s.trim()).filter(Boolean).sort();
+  const rpcArgs = channelsSel.length ? { p_channels: channelsSel } : {};
 
-  const [p, dq, chanList] = await Promise.all([
-    sbRpc<Payload>("dash_payload", channelsSel.length ? { p_channels: channelsSel } : {}),
+  let [p, dq, chanList] = await Promise.all([
+    sbRpc<Payload>("dash_payload", rpcArgs),
     sb<DqRow[]>("dq_scoreboard?select=check_key,score", 120),
     sb<{ channel: string }[]>("cmo_channel?select=channel", 600),
   ]);
+  // cached entry predates a payload-shape change → bypass cache once for a complete payload
+  if (!p?.insights) p = await sbRpc<Payload>("dash_payload", rpcArgs, 0);
 
   const k = p.kpi;
   const rr = p.runrate;
