@@ -35,16 +35,15 @@ export default function Loading() {
         {[1, 2, 3, 4, 5].map((i) => <Sk key={i} className="w-24 rounded-full" h="1.6rem" />)}
       </div>
 
-      {/* automated insights */}
+      {/* automated insights briefing */}
       <Sk className="mb-2 w-40" h="0.7rem" />
-      <section className="mb-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="rounded-xl border p-4" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
-            <Sk className="mb-2 w-20 rounded-full" h="1.1rem" />
-            <Sk className="mb-2 w-3/4" h="1rem" />
-            <Sk className="w-full" h="0.75rem" />
-          </div>
-        ))}
+      <section className="mb-6 rounded-2xl border p-6" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
+        <Sk className="mb-3 w-32" h="0.65rem" />
+        <Sk className="mb-2 w-2/3" h="1.6rem" />
+        <Sk className="mb-5 w-1/2" h="0.8rem" />
+        <div className="grid gap-x-10 gap-y-3 border-t pt-4 md:grid-cols-2" style={{ borderColor: "var(--line)" }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => <Sk key={i} className="w-full" h="0.9rem" />)}
+        </div>
       </section>
 
       {/* KPI row */}
