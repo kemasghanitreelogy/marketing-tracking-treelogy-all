@@ -80,10 +80,10 @@ export function SegmentBars({ rows }: { rows: Seg[] }) {
             onPointerMove={(e) => show(e, (
               <div>
                 <TipTitle>{s.segment}</TipTitle>
-                <TipRow swatch={col} label="GMV" value={idrFull(s.gmv)} />
+                <TipRow swatch={col} label="Revenue" value={idrFull(s.gmv)} />
                 <TipRow label="Customers" value={num(s.customers)} />
                 <TipRow label="Avg orders" value={`${s.avg_orders}×`} />
-                <TipRow label="Avg recency" value={`${num(s.avg_recency_days)} days`} />
+                <TipRow label="Last order" value={`~${num(s.avg_recency_days)} days ago`} />
               </div>
             ))}
             onPointerLeave={hide}>
@@ -129,7 +129,7 @@ export function Pareto({ rows }: { rows: P[] }) {
     show(e, (
       <div>
         <TipTitle>{row.product_name}</TipTitle>
-        <TipRow swatch="var(--brand)" label="GMV" value={idrFull(row.gmv)} />
+        <TipRow swatch="var(--brand)" label="Revenue" value={idrFull(row.gmv)} />
         <TipRow label="Units" value={num(row.units)} />
         <TipRow swatch="var(--accent)" label="Cumulative" value={`${row.cum_gmv_pct}%`} />
       </div>

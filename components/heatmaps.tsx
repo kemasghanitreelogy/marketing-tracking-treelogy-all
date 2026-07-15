@@ -58,7 +58,7 @@ export function GeoTileMap({ rows, unknownShare = 0 }: { rows: GeoRow[]; unknown
   const W = COLS * (CELL + GAP), H = ROWS * (CELL + GAP);
   return (
     <div ref={ref} className="relative overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 560 }} role="img" aria-label="GMV by province, tile map of Indonesia">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 560 }} role="img" aria-label="Revenue by province, tile map of Indonesia">
         {Object.entries(TILES).map(([prov, t]) => {
           const d = byProv.get(prov);
           const a = d ? Math.pow(Number(d.gmv) / maxG, 0.45) : 0; // gamma for perceptual spread
@@ -69,7 +69,7 @@ export function GeoTileMap({ rows, unknownShare = 0 }: { rows: GeoRow[]; unknown
                 <div>
                   <TipTitle>{prov}</TipTitle>
                   {d ? (<>
-                    <TipRow swatch="var(--brand)" label="GMV" value={idrFull(d.gmv)} />
+                    <TipRow swatch="var(--brand)" label="Revenue" value={idrFull(d.gmv)} />
                     <TipRow label="Share" value={`${d.gmv_share}%`} />
                     <TipRow label="Orders" value={num(d.orders)} />
                     <TipRow label="Customers" value={num(d.customers)} />
@@ -87,9 +87,9 @@ export function GeoTileMap({ rows, unknownShare = 0 }: { rows: GeoRow[]; unknown
         })}
       </svg>
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-        <HeatLegend label="GMV" />
+        <HeatLegend label="revenue" />
         <span className="text-[0.62rem]" style={{ color: "var(--ink-soft)" }}>
-          {unknownShare > 0 ? `${(100 - unknownShare).toFixed(1)}% of GMV geolocated · ${unknownShare}% unmapped excluded` : "all orders geolocated"}
+          {unknownShare > 0 ? `${(100 - unknownShare).toFixed(1)}% of revenue mapped to a province · ${unknownShare}% unknown excluded` : "all orders mapped"}
         </span>
       </div>
       <TipBox tip={tip} />
@@ -131,7 +131,7 @@ export function TimeHeatmap({ cells }: { cells: TimeCell[] }) {
                       <div>
                         <TipTitle>{d} · {String(h).padStart(2, "0")}:00–{String(h).padStart(2, "0")}:59 WIB</TipTitle>
                         <TipRow swatch="var(--brand)" label="Orders" value={num(c?.orders ?? 0)} />
-                        <TipRow label="GMV" value={idr(c?.gmv ?? 0)} />
+                        <TipRow label="Revenue" value={idr(c?.gmv ?? 0)} />
                       </div>
                     ))}
                     onPointerLeave={hide} />

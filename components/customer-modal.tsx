@@ -97,10 +97,10 @@ export function Customer360Modal({ uid, name, onClose }: { uid: number; name: st
             <div className="flex flex-col gap-5">
               {/* KPIs */}
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-                <Stat label="GMV" value={idr(data.stats.total_gmv)} />
+                <Stat label="Total spent" value={idr(data.stats.total_gmv)} />
                 <Stat label="Orders" value={num(data.stats.total_orders)} />
                 <Stat label="Units" value={num(data.stats.total_units)} />
-                <Stat label="AOV" value={idr(data.stats.aov)} />
+                <Stat label="Avg/order" value={idr(data.stats.aov)} />
                 <Stat label="First" value={data.stats.first_order ?? "—"} />
                 <Stat label="Last" value={data.stats.last_order ?? "—"} />
                 <Stat label="Recency" value={`${num(data.stats.recency_days)}d`} />
@@ -162,7 +162,7 @@ export function Customer360Modal({ uid, name, onClose }: { uid: number; name: st
               </div>
 
               <div className="text-center text-[0.65rem]" style={{ color: "var(--ink-soft)" }}>
-                Lifetime GMV {idrFull(data.stats.total_gmv)} · unified across all sales channels
+                Total lifetime spend {idrFull(data.stats.total_gmv)} · combined across all sales channels
               </div>
             </div>
           )}
@@ -184,7 +184,7 @@ export default function TopCustomersTable({ rows }: { rows: Row[] }) {
               <th className="pb-2 font-semibold">Channel</th>
               <th className="pb-2 text-right font-semibold">Orders</th>
               <th className="pb-2 text-right font-semibold">Units</th>
-              <th className="pb-2 text-right font-semibold">GMV</th>
+              <th className="pb-2 text-right font-semibold">Spent</th>
             </tr>
           </thead>
           <tbody>

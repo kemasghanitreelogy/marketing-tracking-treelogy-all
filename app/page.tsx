@@ -129,9 +129,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         Last 30 Days Performance{periodLabel ? ` · ending ${k.last_date}` : ""}
       </div>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <DeltaKpi label="GMV" value={idr(k.gmv_cur)} cur={k.gmv_cur} prev={k.gmv_prev} />
+        <DeltaKpi label="Revenue" value={idr(k.gmv_cur)} cur={k.gmv_cur} prev={k.gmv_prev} />
         <DeltaKpi label="Orders" value={num(k.ord_cur)} cur={k.ord_cur} prev={k.ord_prev} />
-        <DeltaKpi label="AOV" value={idr(k.aov_cur)} cur={k.aov_cur} prev={k.aov_prev} />
+        <DeltaKpi label="Avg per Order" value={idr(k.aov_cur)} cur={k.aov_cur} prev={k.aov_prev} />
         <DeltaKpi label="New Customers" value={num(k.new_cur)} cur={k.new_cur} prev={k.new_prev} />
         <DeltaKpi label="Active Customers" value={num(k.act_cur)} cur={k.act_cur} prev={k.act_prev} />
         <DeltaKpi label="Repeat Rate" value={`${repeatCur}%`} cur={repeatCur} prev={repeatPrev} />
@@ -140,18 +140,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* Growth: GMV + channel mix */}
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <SectionTitle title="GMV Growth" hint="IDR millions · monthly (actual + historical estimates)" />
+          <SectionTitle title="Revenue Growth" hint="Rp millions per month (actual + estimates for older data)" />
           <GetInsight points={ins.trend} />
           <AreaTrend data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6), display: idrFull(m.gmv) }))} />
           {rr && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
-              <span className="font-semibold">Projected this month: {idr(rr.projected_gmv)}</span>
+              <span className="font-semibold">On pace for this month: {idr(rr.projected_gmv)}</span>
               <span style={{ color: "var(--ink-soft)" }}>MTD {idr(rr.mtd_gmv)} · day {rr.days_elapsed}/{rr.days_in_month} · last month {idr(rr.prev_month_gmv)}</span>
             </div>
           )}
         </Card>
         <Card>
-          <SectionTitle title="Channel Mix" hint="GMV (IDR)" />
+          <SectionTitle title="Channel Mix" hint="revenue per sales channel" />
           <GetInsight points={ins.channel} />
           <BarList rows={p.channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
         </Card>
@@ -169,17 +169,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           <StackedMonths data={p.monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
         </Card>
         <Card>
-          <SectionTitle title="AOV by Month" hint="IDR" />
+          <SectionTitle title="Average Spend per Order" hint="per month" />
           <GetInsight points={ins.aov} />
           <AreaTrend h={400} data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
-          <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>IDR thousands per order</div>
+          <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>Rp thousands spent per order</div>
         </Card>
       </section>
 
       {/* Cohort retention */}
       <section className="mt-4">
         <Card>
-          <SectionTitle title="Cohort Retention" hint="% of customers ordering again, by months since acquisition (M0–M6)" />
+          <SectionTitle title="Do Customers Come Back?" hint="of customers who joined in a month, % who buy again 0–6 months later" />
           <GetInsight points={ins.cohort} />
           <CohortHeatmap rows={p.cohort} />
         </Card>
@@ -189,12 +189,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <div className="mb-2 mt-6 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Advanced Tracking</div>
       <section className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <SectionTitle title="GMV by Region" hint="tile map of Indonesia · hover for detail" />
+          <SectionTitle title="Revenue by Region" hint="map of Indonesia · hover for detail" />
           <GetInsight points={ins.geo} />
           <GeoTileMap rows={geoKnown} unknownShare={geoUnknownShare} />
         </Card>
         <Card className="lg:col-span-2">
-          <SectionTitle title="Top Regions" hint="GMV share" />
+          <SectionTitle title="Top Regions" hint="share of revenue" />
           <div className="flex flex-col gap-3.5">
             {geoKnown.slice(0, 8).map((g) => (
               <div key={g.province}>
@@ -229,7 +229,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* RFM segments */}
       <section className="mt-4 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <SectionTitle title="Customer Segments (RFM)" hint="by Recency · Frequency · Monetary · click a segment to explore & export" />
+          <SectionTitle title="Customer Groups" hint="grouped by how recently, how often & how much they buy · click a group to see who's in it & export" />
           <GetInsight points={ins.seg} />
           <SegmentPanel rows={p.segments} ch={channelsSel.join(",")} from={from ?? ""} to={to ?? ""} />
         </Card>
@@ -248,7 +248,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* Channel performance matrix + Pareto */}
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <SectionTitle title="Channel Performance" hint="GMV · AOV · customers" />
+          <SectionTitle title="Channel Performance" hint="revenue · spend per order · customers" />
           <GetInsight points={ins.channel} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -256,8 +256,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
                 <tr className="text-left text-[0.66rem] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
                   <th className="pb-2 font-semibold">Channel</th>
                   <th className="pb-2 text-right font-semibold">Orders</th>
-                  <th className="pb-2 text-right font-semibold">GMV</th>
-                  <th className="pb-2 text-right font-semibold">AOV</th>
+                  <th className="pb-2 text-right font-semibold">Revenue</th>
+                  <th className="pb-2 text-right font-semibold">Avg/Order</th>
                   <th className="pb-2 text-right font-semibold">Share</th>
                 </tr>
               </thead>
@@ -276,7 +276,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           </div>
         </Card>
         <Card>
-          <SectionTitle title="Product Concentration (Pareto)" hint="bars = GMV · line = cumulative %" />
+          <SectionTitle title="Which Products Earn the Money" hint="bars = revenue · line = running total %" />
           <GetInsight points={ins.pareto} />
           <Pareto rows={p.pareto} />
         </Card>
@@ -285,7 +285,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* LTV per acquisition channel + basket affinity */}
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <SectionTitle title="LTV by Acquisition Channel" hint="customer lifetime value by first channel" />
+          <SectionTitle title="Customer Value by First Channel" hint="how much a customer ends up spending, based on where they first bought" />
           <GetInsight points={ins.ltv} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -293,7 +293,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
                 <tr className="text-left text-[0.66rem] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
                   <th className="pb-2 font-semibold">Channel</th>
                   <th className="pb-2 text-right font-semibold">Customers</th>
-                  <th className="pb-2 text-right font-semibold">Avg LTV</th>
+                  <th className="pb-2 text-right font-semibold">Avg Value</th>
                   <th className="pb-2 text-right font-semibold">Median</th>
                   <th className="pb-2 text-right font-semibold">Orders</th>
                 </tr>
@@ -336,14 +336,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* Top customers — click a row for the Customer 360 modal */}
       <section className="mt-4">
         <Card>
-          <SectionTitle title="Top Customers by Value" hint="by GMV · click a row for full detail" />
+          <SectionTitle title="Top Customers by Value" hint="by total spend · click a row for full detail" />
           <GetInsight points={ins.top} />
           <TopCustomersTable rows={p.top_customers} />
         </Card>
       </section>
 
       <footer className="mt-8 border-t pt-5 text-center text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
-        {channelsSel.length ? `Filtered: ${channelsSel.join(" + ")} · ` : ""}{periodLabel ? `Period: ${periodLabel} · ` : ""}Total GMV {idrFull(totalGmv)} (actual + per-SKU price estimates for historical periods) · unified data: historical CSV + Jubelio (realtime webhook) + Shopify
+        {channelsSel.length ? `Filtered: ${channelsSel.join(" + ")} · ` : ""}{periodLabel ? `Period: ${periodLabel} · ` : ""}Total revenue {idrFull(totalGmv)} (actual + price estimates for older data) · unified data: historical CSV + Jubelio (realtime webhook) + Shopify
       </footer>
     </main>
   );

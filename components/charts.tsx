@@ -86,7 +86,7 @@ export function BarList({ rows, mode = "num" }: { rows: { name: string; value: n
           onPointerMove={(e) => show(e, (
             <div>
               <TipTitle>{r.name}</TipTitle>
-              <TipRow swatch="var(--brand)" label={mode === "idr" ? "GMV" : "Units"} value={mode === "idr" ? idrFull(r.value) : num(r.value)} />
+              <TipRow swatch="var(--brand)" label={mode === "idr" ? "Revenue" : "Units"} value={mode === "idr" ? idrFull(r.value) : num(r.value)} />
             </div>
           ))}
           onPointerLeave={hide}>

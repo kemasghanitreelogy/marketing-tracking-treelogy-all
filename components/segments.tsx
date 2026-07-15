@@ -13,7 +13,7 @@ const SEG_COLOR: Record<string, string> = {
   "Hibernating": "#8A7BA8", "Others": "var(--ink-soft)",
 };
 const SEG_DEF: Record<string, { rule: string; action: string }> = {
-  "Champions": { rule: "Bought recently AND buy often (top recency + top frequency).", action: "Reward & referral programs, early access to launches — protect this revenue." },
+  "Champions": { rule: "Bought recently AND buy often — your best customers.", action: "Reward & referral programs, early access to launches — protect this revenue." },
   "Loyal": { rule: "Buy often, reasonably recent.", action: "Upsell bundles & subscriptions; cross-sell adjacent products." },
   "Potential Loyalist": { rule: "Recent buyers with 2–3 orders building a habit.", action: "Nurture with loyalty perks to convert into Loyal/Champions." },
   "New / Promising": { rule: "First purchase very recently.", action: "Onboarding flow + second-order nudge before the habit window closes." },
@@ -113,10 +113,10 @@ function SegmentModal({ seg, ch, from, to, onClose }: { seg: Seg; ch: string; fr
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
             {[
               ["Customers", data ? num(data.summary.customers) : "…"],
-              ["Segment GMV", data ? idr(data.summary.gmv) : "…"],
-              ["AOV", data ? idr(data.summary.aov) : "…"],
+              ["Total spent", data ? idr(data.summary.gmv) : "…"],
+              ["Avg/order", data ? idr(data.summary.aov) : "…"],
               ["Avg orders", data ? `${data.summary.avg_orders}×` : "…"],
-              ["Avg recency", data ? `${num(data.summary.avg_recency_days)}d` : "…"],
+              ["Last order", data ? `~${num(data.summary.avg_recency_days)}d ago` : "…"],
             ].map(([l, v]) => (
               <div key={l} className="rounded-lg p-2.5" style={{ background: "var(--line-soft)" }}>
                 <div className="text-[0.6rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>{l}</div>
@@ -146,7 +146,7 @@ function SegmentModal({ seg, ch, from, to, onClose }: { seg: Seg; ch: string; fr
                     <th className="pb-2 font-semibold">Customer</th>
                     <th className="hidden pb-2 font-semibold sm:table-cell">Contact</th>
                     <th className="pb-2 text-right font-semibold">Orders</th>
-                    <th className="pb-2 text-right font-semibold">GMV</th>
+                    <th className="pb-2 text-right font-semibold">Spent</th>
                     <th className="pb-2 text-right font-semibold">Last order</th>
                   </tr>
                 </thead>
@@ -199,10 +199,10 @@ export default function SegmentPanel({ rows, ch, from = "", to = "" }: { rows: S
             onPointerMove={(e) => show(e, (
               <div>
                 <TipTitle>{s.segment}</TipTitle>
-                <TipRow swatch={col} label="GMV" value={idrFull(s.gmv)} />
+                <TipRow swatch={col} label="Revenue" value={idrFull(s.gmv)} />
                 <TipRow label="Customers" value={num(s.customers)} />
                 <TipRow label="Avg orders" value={`${s.avg_orders}×`} />
-                <TipRow label="Avg recency" value={`${num(s.avg_recency_days)} days`} />
+                <TipRow label="Last order" value={`~${num(s.avg_recency_days)} days ago`} />
                 <div className="mt-1 text-[0.65rem]" style={{ color: "var(--ink-soft)" }}>Click to explore members ↗</div>
               </div>
             ))}
