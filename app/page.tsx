@@ -24,17 +24,16 @@ type Payload = {
   geo: { province: string; orders: number; units: number; gmv: string; customers: number; gmv_share: number }[];
   time_heatmap: { dow: number; hr: number; orders: number; gmv: string }[];
   season: { product_name: string; ym: string; units: number; orders: number }[];
+  insights: { severity: string; title: string; detail: string | null }[];
 };
-type Insight = { severity: string; title: string; detail: string | null };
 type DqRow = { check_key: string; score: string };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string }> }) {
   const sp = await searchParams;
   const channelsSel = (sp.ch ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
-  const [p, insights, dq, chanList] = await Promise.all([
+  const [p, dq, chanList] = await Promise.all([
     sbRpc<Payload>("dash_payload", channelsSel.length ? { p_channels: channelsSel } : {}),
-    sb<Insight[]>("cmo_insights", 120),
     sb<DqRow[]>("dq_scoreboard?select=check_key,score", 120),
     sb<{ channel: string }[]>("cmo_channel?select=channel", 600),
   ]);
@@ -81,10 +80,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         <ChannelFilter channels={allChannels} />
       </div>
 
-      {/* Automated insights — the "so what" first (all-channel) */}
-      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Automated Insights</div>
+      {/* Automated insights — the "so what" first, recomputed per channel filter */}
+      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
+        Automated Insights{channelsSel.length ? ` · ${channelsSel.join(" + ")}` : ""}
+      </div>
       <section className="mb-6">
-        <InsightCards rows={insights} />
+        <InsightCards rows={p.insights} />
       </section>
 
       {/* Executive KPIs — rolling 30 days vs prior 30 days */}

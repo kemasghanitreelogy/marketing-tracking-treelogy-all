@@ -56,7 +56,7 @@ export default function ChannelFilter({ channels }: { channels: string[] }) {
         </span>
       )}
       {!activeAll && (
-        <span className="text-[0.66rem]" style={{ color: "var(--ink-soft)" }}>· insights & data-quality stay all-channel</span>
+        <span className="text-[0.66rem]" style={{ color: "var(--ink-soft)" }}>· data-quality score stays all-channel</span>
       )}
     </div>
   );

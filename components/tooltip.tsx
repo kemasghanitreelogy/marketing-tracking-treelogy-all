@@ -3,7 +3,7 @@
 // (works for mouse AND touch), pointer-events:none so it never flickers or blocks.
 import { ReactNode, useRef, useState } from "react";
 
-export type Tip = { x: number; y: number; node: ReactNode } | null;
+export type Tip = { x: number; y: number; node: ReactNode; below?: boolean } | null;
 
 export function useTip() {
   const ref = useRef<HTMLDivElement>(null);
@@ -14,8 +14,9 @@ export function useTip() {
     if (!r) return;
     // clamp horizontally so the box never clips at container edges
     const x = Math.min(Math.max(e.clientX - r.left, 76), Math.max(r.width - 76, 76));
-    const y = Math.max(e.clientY - r.top, 44);
-    setTip({ x, y, node });
+    const y = e.clientY - r.top;
+    // not enough headroom above the pointer → flip the box below it
+    setTip({ x, y, node, below: y < 120 });
   }
   const hide = () => setTip(null);
   return { ref, tip, show, hide };
@@ -30,7 +31,7 @@ export function TipBox({ tip }: { tip: Tip }) {
       style={{
         left: tip.x,
         top: tip.y,
-        transform: "translate(-50%, calc(-100% - 14px))",
+        transform: tip.below ? "translate(-50%, 14px)" : "translate(-50%, calc(-100% - 14px))",
         background: "var(--surface)",
         borderColor: "var(--line)",
         color: "var(--ink)",
