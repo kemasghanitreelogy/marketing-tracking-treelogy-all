@@ -138,7 +138,7 @@ export function Pareto({ rows }: { rows: P[] }) {
 
   return (
     <div ref={ref} className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" role="img" aria-label="Product GMV Pareto"
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" role="img" aria-label="Revenue per product with running total"
         onPointerMove={onMove} onPointerLeave={hide}>
         {[0, 50, 80, 100].map((p) => (
           <g key={p}>
