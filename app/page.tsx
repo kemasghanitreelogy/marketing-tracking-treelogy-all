@@ -1,4 +1,4 @@
-import { sb } from "@/lib/supabase";
+import { sb, sbRpc } from "@/lib/supabase";
 import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
 import { AreaTrend, BarList, StackedMonths } from "@/components/charts";
@@ -6,53 +6,52 @@ import { DeltaKpi, InsightCards } from "@/components/cmo";
 import { CohortHeatmap, SegmentBars, Pareto } from "@/components/cmo-charts";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopCustomersTable from "@/components/customer-modal";
-import { GeoTileMap, TimeHeatmap, SeasonHeatmap, type GeoRow, type TimeCell, type SeasonCell } from "@/components/heatmaps";
-
-export const revalidate = 300;
+import { GeoTileMap, TimeHeatmap, SeasonHeatmap } from "@/components/heatmaps";
+import ChannelFilter from "@/components/channel-filter";
 
 type Kpi = { gmv_cur: number; gmv_prev: number; ord_cur: number; ord_prev: number; act_cur: number; act_prev: number; new_cur: number; new_prev: number; aov_cur: number; aov_prev: number; last_date: string };
-type Monthly = { ym: string; orders: number; units: number; gmv: string; aov: string; active_customers: number; new_customers: number; returning_customers: number };
-type Channel = { channel: string; orders: number; units: number; gmv: string; aov: string; customers: number; gmv_share: number };
-type Cohort = { cohort: string; months_since: number; retention_pct: number; retained: number; cohort_size: number };
-type Segment = { segment: string; customers: number; gmv: string; gmv_share: number; avg_orders: number; avg_recency_days: number };
-type ParetoRow = { product_name: string; gmv: string; units: number; cum_gmv_pct: number };
-type TopCust = { unified_customer_id: number; name: string; channels: string[]; orders: number; units: number; revenue: string };
+type Payload = {
+  kpi: Kpi;
+  runrate: { mtd_gmv: string; days_elapsed: number; days_in_month: number; projected_gmv: string; prev_month_gmv: string };
+  monthly: { ym: string; orders: number; units: number; gmv: string; aov: string; new_customers: number; returning_customers: number }[];
+  channels: { channel: string; orders: number; units: number; gmv: string; aov: string; customers: number; gmv_share: number }[];
+  cohort: { cohort: string; months_since: number; retention_pct: number; retained: number; cohort_size: number }[];
+  segments: { segment: string; customers: number; gmv: string; gmv_share: number; avg_orders: number; avg_recency_days: number }[];
+  pareto: { product_name: string; gmv: string; units: number; cum_gmv_pct: number }[];
+  top_customers: { unified_customer_id: number; name: string; channels: string[]; orders: number; units: number; revenue: string }[];
+  ltv: { first_channel: string; customers: number; avg_ltv: string; median_ltv: string; avg_orders: number }[];
+  affinity: { p1: string; p2: string; together: number; lift: number }[];
+  geo: { province: string; orders: number; units: number; gmv: string; customers: number; gmv_share: number }[];
+  time_heatmap: { dow: number; hr: number; orders: number; gmv: string }[];
+  season: { product_name: string; ym: string; units: number; orders: number }[];
+};
 type Insight = { severity: string; title: string; detail: string | null };
-type Runrate = { mtd_gmv: string; days_elapsed: number; days_in_month: number; projected_gmv: string; prev_month_gmv: string };
-type Ltv = { first_channel: string; customers: number; avg_ltv: string; median_ltv: string; avg_orders: number };
-type Affinity = { p1: string; p2: string; together: number; lift: number; attach_pct: number };
 type DqRow = { check_key: string; score: string };
 
-export default async function Page() {
-  const [kpiA, monthly, channels, cohort, segments, pareto, topCust, insights, runrateA, ltv, affinity, dq, geo, timeCells, season] = await Promise.all([
-    sb<Kpi[]>("cmo_kpi"),
-    sb<Monthly[]>("cmo_monthly?order=ym.asc"),
-    sb<Channel[]>("cmo_channel"),
-    sb<Cohort[]>("cmo_cohort?order=cohort.asc"),
-    sb<Segment[]>("cmo_segments"),
-    sb<ParetoRow[]>("cmo_product_pareto?order=gmv.desc&limit=12"),
-    sb<TopCust[]>("dash_top_customers?order=revenue.desc&limit=10"),
-    sb<Insight[]>("cmo_insights"),
-    sb<Runrate[]>("cmo_runrate"),
-    sb<Ltv[]>("cmo_ltv_channel"),
-    sb<Affinity[]>("cmo_affinity?order=together.desc&limit=6"),
-    sb<DqRow[]>("dq_scoreboard?select=check_key,score"),
-    sb<GeoRow[]>("cmo_geo?order=gmv.desc"),
-    sb<TimeCell[]>("cmo_time_heatmap"),
-    sb<SeasonCell[]>("cmo_product_season"),
+export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string }> }) {
+  const sp = await searchParams;
+  const channelsSel = (sp.ch ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  const [p, insights, dq, chanList] = await Promise.all([
+    sbRpc<Payload>("dash_payload", channelsSel.length ? { p_channels: channelsSel } : {}),
+    sb<Insight[]>("cmo_insights", 120),
+    sb<DqRow[]>("dq_scoreboard?select=check_key,score", 120),
+    sb<{ channel: string }[]>("cmo_channel?select=channel", 600),
   ]);
-  const k = kpiA[0];
-  const rr = runrateA[0];
+
+  const k = p.kpi;
+  const rr = p.runrate;
   const dqScore = dq.length ? Math.min(...dq.map((d) => Number(d.score))) : null;
-  const totalGmv = channels.reduce((s, c) => s + Number(c.gmv), 0);
+  const totalGmv = p.channels.reduce((s, c) => s + Number(c.gmv), 0);
   const repeatCur = k.act_cur ? Math.round((1 - k.new_cur / k.act_cur) * 100) : 0;
   const repeatPrev = k.act_prev ? Math.round((1 - k.new_prev / k.act_prev) * 100) : 0;
-  const geoKnown = geo.filter((g) => g.province !== "Unknown");
-  const geoUnknownShare = Number(geo.find((g) => g.province === "Unknown")?.gmv_share ?? 0);
+  const geoKnown = p.geo.filter((g) => g.province !== "Unknown");
+  const geoUnknownShare = Number(p.geo.find((g) => g.province === "Unknown")?.gmv_share ?? 0);
+  const allChannels = chanList.map((c) => c.channel);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:px-6">
-      <header className="mb-7 flex flex-wrap items-center justify-between gap-4">
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--brand-ink)" }}>
             <span style={{ color: "var(--brand)" }}>❦</span> Treelogy · Executive Marketing Dashboard
@@ -77,7 +76,12 @@ export default async function Page() {
         </div>
       </header>
 
-      {/* Automated insights — the "so what" first */}
+      {/* Global channel filter — drives every chart below */}
+      <div className="mb-6 rounded-xl border px-4 py-3" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
+        <ChannelFilter channels={allChannels} />
+      </div>
+
+      {/* Automated insights — the "so what" first (all-channel) */}
       <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Automated Insights</div>
       <section className="mb-6">
         <InsightCards rows={insights} />
@@ -98,7 +102,7 @@ export default async function Page() {
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <SectionTitle title="GMV Growth" hint="IDR millions · monthly (actual + historical estimates)" />
-          <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6), display: idrFull(m.gmv) }))} />
+          <AreaTrend data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6), display: idrFull(m.gmv) }))} />
           {rr && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
               <span className="font-semibold">Projected this month: {idr(rr.projected_gmv)}</span>
@@ -108,7 +112,7 @@ export default async function Page() {
         </Card>
         <Card>
           <SectionTitle title="Channel Mix" hint="GMV (IDR)" />
-          <BarList rows={channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
+          <BarList rows={p.channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
         </Card>
       </section>
 
@@ -120,11 +124,11 @@ export default async function Page() {
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--accent)" }} /> New</span>
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--brand)" }} /> Returning</span>
           </div>
-          <StackedMonths data={monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
+          <StackedMonths data={p.monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
         </Card>
         <Card>
           <SectionTitle title="AOV by Month" hint="IDR" />
-          <AreaTrend data={monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
+          <AreaTrend data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
           <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>IDR thousands per order</div>
         </Card>
       </section>
@@ -133,7 +137,7 @@ export default async function Page() {
       <section className="mt-4">
         <Card>
           <SectionTitle title="Cohort Retention" hint="% of customers ordering again, by months since acquisition (M0–M6)" />
-          <CohortHeatmap rows={cohort} />
+          <CohortHeatmap rows={p.cohort} />
         </Card>
       </section>
 
@@ -163,11 +167,11 @@ export default async function Page() {
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <SectionTitle title="Purchase Time Heatmap" hint="orders by day × hour (WIB) · Apr 2026 onward" />
-          <TimeHeatmap cells={timeCells} />
+          <TimeHeatmap cells={p.time_heatmap} />
         </Card>
         <Card>
           <SectionTitle title="Product Seasonality" hint="units by month · intensity relative to each product's peak" />
-          <SeasonHeatmap cells={season} />
+          <SeasonHeatmap cells={p.season} />
         </Card>
       </section>
 
@@ -175,7 +179,7 @@ export default async function Page() {
       <section className="mt-4 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <SectionTitle title="Customer Segments (RFM)" hint="by Recency · Frequency · Monetary" />
-          <SegmentBars rows={segments} />
+          <SegmentBars rows={p.segments} />
         </Card>
         <Card className="lg:col-span-2">
           <SectionTitle title="Actions per Segment" hint="recommendations" />
@@ -205,7 +209,7 @@ export default async function Page() {
                 </tr>
               </thead>
               <tbody>
-                {channels.map((c) => (
+                {p.channels.map((c) => (
                   <tr key={c.channel} className="border-b last:border-0 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
                     <td className="py-2 font-medium">{c.channel}</td>
                     <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(c.orders)}</td>
@@ -220,7 +224,7 @@ export default async function Page() {
         </Card>
         <Card>
           <SectionTitle title="Product Concentration (Pareto)" hint="bars = GMV · line = cumulative %" />
-          <Pareto rows={pareto} />
+          <Pareto rows={p.pareto} />
         </Card>
       </section>
 
@@ -240,7 +244,7 @@ export default async function Page() {
                 </tr>
               </thead>
               <tbody>
-                {ltv.map((r) => (
+                {p.ltv.map((r) => (
                   <tr key={r.first_channel} className="border-b last:border-0 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
                     <td className="py-2 font-medium">{r.first_channel}</td>
                     <td className="py-2 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>{num(r.customers)}</td>
@@ -256,7 +260,7 @@ export default async function Page() {
         <Card>
           <SectionTitle title="Frequently Bought Together" hint="bundling & cross-sell opportunities" />
           <div className="flex flex-col gap-2.5">
-            {affinity.map((a, i) => (
+            {p.affinity.map((a, i) => (
               <div key={i} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line-soft)" }}>
                 <div className="min-w-0 text-sm">
                   <span className="font-semibold">{a.p1}</span>
@@ -277,12 +281,12 @@ export default async function Page() {
       <section className="mt-4">
         <Card>
           <SectionTitle title="Top Customers by Value" hint="by GMV · click a row for full detail" />
-          <TopCustomersTable rows={topCust} />
+          <TopCustomersTable rows={p.top_customers} />
         </Card>
       </section>
 
       <footer className="mt-8 border-t pt-5 text-center text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
-        Total GMV {idrFull(totalGmv)} (actual + per-SKU price estimates for historical periods) · unified data: historical CSV + Jubelio (realtime webhook) + Shopify
+        {channelsSel.length ? `Filtered: ${channelsSel.join(" + ")} · ` : ""}Total GMV {idrFull(totalGmv)} (actual + per-SKU price estimates for historical periods) · unified data: historical CSV + Jubelio (realtime webhook) + Shopify
       </footer>
     </main>
   );

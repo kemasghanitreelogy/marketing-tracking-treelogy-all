@@ -1,6 +1,18 @@
 const URL = process.env.SUPABASE_URL ?? "";
 const KEY = process.env.SUPABASE_SERVICE_KEY ?? "";
 
+// POST an RPC (PostgREST). Used for the channel-filtered dashboard payload.
+export async function sbRpc<T = unknown>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
+  const res = await fetch(`${URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Supabase rpc ${fn} -> ${res.status}: ${await res.text()}`);
+  return res.json() as Promise<T>;
+}
+
 // Server-only fetch against Supabase REST (PostgREST) views. Service key stays on the server.
 export async function sb<T = unknown>(path: string, revalidate = 300): Promise<T> {
   const res = await fetch(`${URL}/rest/v1/${path}`, {
