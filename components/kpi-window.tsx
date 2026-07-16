@@ -31,7 +31,7 @@ export default function KpiWindow() {
           <circle cx="12" cy="12" r="9" opacity="0.25" /><path d="M21 12a9 9 0 0 0-9-9" strokeLinecap="round" />
         </svg>
       )}
-      <span className="hidden text-[0.62rem] sm:inline" style={{ color: "var(--ink-soft)" }}>compare window</span>
+      <span className="hidden text-[0.62rem] sm:inline" style={{ color: "var(--ink-soft)" }}>these cards compare</span>
       <div role="group" aria-label="KPI comparison window"
         className="relative grid grid-cols-5 rounded-full border p-0.5"
         style={{ borderColor: "var(--line)", background: "var(--surface)" }}>

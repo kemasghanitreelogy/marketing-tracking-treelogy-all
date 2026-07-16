@@ -2,8 +2,35 @@
 // Advanced tracking heatmaps: Indonesia tile cartogram (geo), purchase-time 7×24,
 // and product seasonality. Single-hue sequential scale (colorblind-safe) + exact
 // values in tooltips per accessibility guidance.
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { useTip, TipBox, TipTitle, TipRow } from "@/components/tooltip";
+
+// Horizontal scroll wrapper with a right-edge fade that only appears while there
+// is actually more content to scroll to — a cut glyph must never look "broken".
+function ScrollFade({ children }: { children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const check = () => setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
+  }, []);
+  return (
+    <div className="relative">
+      <div ref={box} className="overflow-x-auto">{children}</div>
+      {more && (
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-10" aria-hidden
+          style={{ background: "linear-gradient(to right, transparent, var(--surface))" }} />
+      )}
+    </div>
+  );
+}
 
 // Small low→high gradient legend (accessibility: label the scale)
 export function HeatLegend({ label = "orders" }: { label?: string }) {
@@ -106,7 +133,8 @@ export function TimeHeatmap({ cells }: { cells: TimeCell[] }) {
   const max = Math.max(1, ...cells.map((c) => c.orders));
   const peak = cells.reduce((p, c) => (c.orders > (p?.orders ?? 0) ? c : p), cells[0]);
   return (
-    <div ref={ref} className="relative overflow-x-auto">
+    <div ref={ref} className="relative">
+      <ScrollFade>
       <table className="border-separate text-[0.6rem]" style={{ borderSpacing: 2, minWidth: 620 }}>
         <thead>
           <tr>
@@ -141,6 +169,7 @@ export function TimeHeatmap({ cells }: { cells: TimeCell[] }) {
           ))}
         </tbody>
       </table>
+      </ScrollFade>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         {peak && (
           <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
@@ -166,7 +195,8 @@ export function SeasonHeatmap({ cells }: { cells: SeasonCell[] }) {
   const totals = new Map(products.map((p) => [p, cells.filter((c) => c.product_name === p).reduce((s, c) => s + Number(c.units), 0)]));
   products.sort((a, b) => (totals.get(b) ?? 0) - (totals.get(a) ?? 0));
   return (
-    <div ref={ref} className="relative overflow-x-auto">
+    <div ref={ref} className="relative">
+      <ScrollFade>
       <table className="w-full border-separate text-[0.66rem]" style={{ borderSpacing: 2, minWidth: 640 }}>
         <thead>
           <tr>
@@ -206,6 +236,7 @@ export function SeasonHeatmap({ cells }: { cells: SeasonCell[] }) {
           ))}
         </tbody>
       </table>
+      </ScrollFade>
       <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>
         Color intensity is relative to each product&apos;s own peak month — read rows to spot seasonality. ✱ latest month is month-to-date (partial).
       </div>

@@ -112,7 +112,7 @@ export default function ChannelFilter({ channels }: { channels: string[] }) {
           <input type="date" value={from} min={DATA_START} max={to || iso(new Date())}
             onChange={(e) => nav({ from: e.target.value })}
             aria-label="From date"
-            className="cursor-pointer rounded-lg border px-2 py-1 font-mono text-xs tnum outline-none transition-colors duration-200 focus-visible:border-[var(--brand)]"
+            className="cursor-pointer rounded-full border px-3 py-1 font-mono text-xs tnum outline-none transition-colors duration-200 focus-visible:border-[var(--brand)]"
             style={{ borderColor: from ? "var(--brand)" : "var(--line)", background: "transparent", color: "var(--ink)", colorScheme: "light dark" }} />
         </label>
         <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-soft)" }}>
@@ -120,7 +120,7 @@ export default function ChannelFilter({ channels }: { channels: string[] }) {
           <input type="date" value={to} min={from || DATA_START} max={iso(new Date())}
             onChange={(e) => nav({ to: e.target.value })}
             aria-label="To date"
-            className="cursor-pointer rounded-lg border px-2 py-1 font-mono text-xs tnum outline-none transition-colors duration-200 focus-visible:border-[var(--brand)]"
+            className="cursor-pointer rounded-full border px-3 py-1 font-mono text-xs tnum outline-none transition-colors duration-200 focus-visible:border-[var(--brand)]"
             style={{ borderColor: to ? "var(--brand)" : "var(--line)", background: "transparent", color: "var(--ink)", colorScheme: "light dark" }} />
         </label>
         {(from || to) && (

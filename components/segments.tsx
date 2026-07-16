@@ -230,6 +230,9 @@ export default function SegmentPanel({ rows, ch, from = "", to = "" }: { rows: S
           </div>
         );
       })}
+      <div className="mt-1 px-2 text-[0.66rem]" style={{ color: "var(--ink-soft)" }}>
+        cust = customers · × = average orders each · d = days since their last order
+      </div>
       <TipBox tip={tip} />
       {open && <SegmentModal seg={open} ch={ch} from={from} to={to} onClose={() => setOpen(null)} />}
     </div>

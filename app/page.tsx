@@ -207,7 +207,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         <ExpandCard label="Channel Mix">
           <SectionTitle title="Channel Mix" hint="revenue per sales channel" />
           <GetInsight points={ins.channel} />
-          <BarList rows={p.channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
+          <BarList rows={p.channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv), meta: `${c.gmv_share}%` }))} mode="idr" />
         </ExpandCard>
       </section>
 
@@ -216,14 +216,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         <ExpandCard label="Acquisition vs Retention" className="lg:col-span-2">
           <SectionTitle title="Acquisition vs Retention" hint="active customers per month" />
           <GetInsight points={ins.acq} />
-          <div className="mb-3 flex gap-4 text-xs" style={{ color: "var(--ink-soft)" }}>
-            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--accent)" }} /> New</span>
-            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--brand)" }} /> Returning</span>
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {[["New customers", "var(--accent)"], ["Returning customers", "var(--brand)"]].map(([l, c]) => (
+              <span key={l} className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold" style={{ borderColor: "var(--line)", color: "var(--ink)" }}>
+                <i className="h-2 w-2 rounded-full" style={{ background: c }} />{l}
+              </span>
+            ))}
           </div>
           <StackedMonths data={p.monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
         </ExpandCard>
         <ExpandCard label="Average Spend per Order">
-          <SectionTitle title="Average Spend per Order" hint={aovSeries ? "per month · one line per channel + all combined" : "per month"} />
+          <SectionTitle title="Average Spend per Order" hint={aovSeries ? "per month · per channel" : "per month"} />
           <GetInsight points={ins.aov} />
           {aovSeries ? (
             <MultiTrend w={430} h={380} endLabels={false} series={aovSeries} />
@@ -300,6 +303,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
             <li className="flex gap-2"><span style={{ color: "#4FA3A3" }}>✦</span> <span><b>New / Promising</b> — onboarding & second-order nudge.</span></li>
             <li className="flex gap-2"><span style={{ color: "#8A7BA8" }}>◇</span> <span><b>Hibernating</b> — low-cost reactivation or let go.</span></li>
           </ul>
+          {(() => {
+            const ar = p.segments.find((s) => s.segment === "At Risk (high value)");
+            return ar ? (
+              <div className="mt-4 rounded-lg border px-3 py-2.5 text-sm" style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
+                <span className="font-semibold" style={{ color: "var(--accent)" }}>Biggest opportunity:</span>{" "}
+                <span style={{ color: "var(--ink-soft)" }}>{num(ar.customers)} valuable customers have gone quiet — worth <b className="font-mono tnum" style={{ color: "var(--ink)" }}>{idr(ar.gmv)}</b> if won back.</span>
+              </div>
+            ) : null;
+          })()}
         </ExpandCard>
       </section>
 
@@ -353,7 +365,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
                   <th className="pb-2 text-right font-semibold">Customers</th>
                   <th className="pb-2 text-right font-semibold">Avg Value</th>
                   <th className="pb-2 text-right font-semibold">Median</th>
-                  <th className="pb-2 text-right font-semibold">Orders</th>
+                  <th className="pb-2 text-right font-semibold">Avg orders</th>
                 </tr>
               </thead>
               <tbody>
@@ -382,12 +394,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
                   <span className="font-semibold">{a.p2}</span>
                 </div>
                 <div className="shrink-0 text-right font-mono text-xs tnum" style={{ color: "var(--ink-soft)" }}>
-                  {num(a.together)}× <span className="font-semibold" style={{ color: "var(--brand)" }}>lift {a.lift}</span>
+                  bought together {num(a.together)}×{" "}
+                  {Number(a.lift) >= 1.05
+                    ? <span className="font-semibold" style={{ color: "var(--good)" }}>· more than chance</span>
+                    : Number(a.lift) >= 0.95
+                      ? <span>· ≈ chance</span>
+                      : null}
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>lift &gt; 1 = pairing occurs more often than chance — bundle candidates</div>
+          <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>ranked by how often the pair lands in one order — green pairs happen more often than random chance (strong bundle candidates)</div>
         </ExpandCard>
       </section>
 

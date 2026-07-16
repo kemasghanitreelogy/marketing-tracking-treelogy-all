@@ -183,7 +183,8 @@ export function SegmentBars({ rows }: { rows: Seg[] }) {
 type P = { product_name: string; gmv: string; units: number; cum_gmv_pct: number };
 export function Pareto({ rows }: { rows: P[] }) {
   const { ref, tip, show, hide } = useTip();
-  const W = 720, H = 240, pad = { t: 16, r: 40, b: 54, l: 48 };
+  // 600-wide viewBox in a half-width card ≈ 1:1 scale → axis & product labels stay legible
+  const W = 600, H = 260, pad = { t: 16, r: 40, b: 56, l: 12 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const max = Math.max(1, ...rows.map((r) => Number(r.gmv)));
   const bw = (iw / rows.length) * 0.6;
@@ -212,7 +213,7 @@ export function Pareto({ rows }: { rows: P[] }) {
     <div ref={ref} className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" role="img" aria-label="Revenue per product with running total"
         onPointerMove={onMove} onPointerLeave={hide}>
-        {[0, 50, 80, 100].map((p) => (
+        {[0, 25, 50, 75, 100].map((p) => (
           <g key={p}>
             <line x1={pad.l} x2={W - pad.r} y1={yc(p)} y2={yc(p)} stroke="var(--grid)" />
             <text x={W - pad.r + 6} y={yc(p) + 3} fontSize="9" fill="var(--ink-soft)" className="tnum">{p}%</text>
@@ -223,9 +224,15 @@ export function Pareto({ rows }: { rows: P[] }) {
         ))}
         <path d={line} fill="none" stroke="var(--accent)" strokeWidth="2" />
         {rows.map((r, i) => <circle key={i} cx={x(i)} cy={yc(Number(r.cum_gmv_pct))} r="2.5" fill="var(--accent)" />)}
-        {rows.map((r, i) => (
-          <text key={i} x={x(i)} y={H - 8} textAnchor="end" fontSize="8.5" fill="var(--ink-soft)" transform={`rotate(-35 ${x(i)} ${H - 8})`}>{r.product_name.length > 16 ? r.product_name.slice(0, 15) + "…" : r.product_name}</text>
-        ))}
+        {/* horizontal short labels, staggered on two rows so 12 bars never collide */}
+        {rows.map((r, i) => {
+          const short = r.product_name.replace(/^The /, "").split(" ").slice(0, 2).join(" ");
+          return (
+            <text key={i} x={x(i)} y={i % 2 === 0 ? H - 22 : H - 8} textAnchor="middle" fontSize="9.5" fill="var(--ink-soft)">
+              {short.length > 10 ? short.slice(0, 9) + "…" : short}
+            </text>
+          );
+        })}
       </svg>
       <TipBox tip={tip} />
     </div>

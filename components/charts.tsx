@@ -8,6 +8,17 @@ import { useTip, TipBox, TipTitle, TipRow } from "@/components/tooltip";
 
 export type Pt = { label: string; value: number; display?: string };
 
+// round gridline steps (1/2/5 × 10^k) — 0/500/1000 instead of 0/629/1258
+function niceTicks(max: number): number[] {
+  const raw = max / 3;
+  const p = Math.pow(10, Math.floor(Math.log10(Math.max(1, raw))));
+  const d = raw / p;
+  const step = (d <= 1 ? 1 : d <= 2 ? 2 : d <= 2.5 ? 2.5 : d <= 5 ? 5 : 10) * p;
+  const out: number[] = [];
+  for (let t = 0; t <= max; t += step) out.push(t);
+  return out;
+}
+
 function svgX(e: PointerEvent<SVGSVGElement>, viewW: number) {
   const r = e.currentTarget.getBoundingClientRect();
   return ((e.clientX - r.left) / r.width) * viewW;
@@ -22,7 +33,7 @@ export function AreaTrend({ data, unit = "", h = 220 }: { data: Pt[]; unit?: str
   const y = (v: number) => pad.t + ih - (v / max) * ih;
   const line = data.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.value).toFixed(1)}`).join(" ");
   const area = `${line} L${x(data.length - 1).toFixed(1)},${pad.t + ih} L${x(0).toFixed(1)},${pad.t + ih} Z`;
-  const ticks = [0, 0.5, 1].map((f) => Math.round(max * f));
+  const ticks = niceTicks(max);
   const step = Math.ceil(data.length / 6);
   const last = data[data.length - 1];
   const [hoverIdx, setHoverIdx] = useState(-1);
@@ -99,7 +110,7 @@ export function MultiTrend({ series, unit = "", h = 260, w = 720, endLabels = tr
   const max = Math.max(1, ...visible.flatMap((s) => s.data.map((d) => d.value ?? 0)));
   const x = (i: number) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * iw);
   const y = (v: number) => pad.t + ih - (v / max) * ih;
-  const ticks = [0, 0.5, 1].map((f) => Math.round(max * f));
+  const ticks = niceTicks(max);
   const step = Math.ceil(n / 6);
 
   // gap-aware path: restart with M after every null value
@@ -128,6 +139,11 @@ export function MultiTrend({ series, unit = "", h = 260, w = 720, endLabels = tr
     e.ly = Math.min(Math.max(e.ly, pad.t + 5), pad.t + ih - 2);
     if (k > 0) e.ly = Math.max(e.ly, ends[k - 1].ly + 13);
   });
+  // backward pass: if the push-apart ran past the bottom, lift the stack back up
+  for (let k = ends.length - 1; k >= 0; k--) {
+    const maxY = pad.t + ih - 2 - (ends.length - 1 - k) * 13;
+    if (ends[k].ly > maxY) ends[k].ly = maxY;
+  }
 
   const dim = (name: string) => (focus && focus !== name ? 0.15 : 1);
 
@@ -207,6 +223,8 @@ export function MultiTrend({ series, unit = "", h = 260, w = 720, endLabels = tr
         {ends.map((e) => (
           <g key={e.s.name} opacity={dim(e.s.name)} style={{ transition: "opacity .2s" }}>
             <circle cx={x(e.i)} cy={e.py} r="3.5" fill={e.s.color} stroke="var(--surface)" strokeWidth="1.5" />
+            {/* leader from the line end to its (collision-pushed) label */}
+            <path d={`M${x(e.i) + 6},${e.py} L${pad.l + iw + 5},${e.ly}`} fill="none" stroke="var(--line)" strokeWidth="1" />
             <text x={pad.l + iw + 8} y={e.ly + 3} fontSize="10" fontWeight={e.s.emphasis ? 700 : 500} fill="var(--ink-soft)">{e.s.name}</text>
           </g>
         ))}
@@ -246,8 +264,9 @@ export function BarList({ rows, mode = "num" }: { rows: { name: string; value: n
           <div className="relative h-6 flex-1 overflow-hidden rounded-md" style={{ background: "var(--line-soft)" }}>
             <div className="h-full rounded-md" style={{ width: `${(r.value / max) * 100}%`, background: "var(--brand)", opacity: 0.85 }} />
           </div>
-          <div className="w-24 shrink-0 whitespace-nowrap text-right font-mono text-sm tnum" style={{ color: "var(--ink)" }}>
+          <div className="shrink-0 whitespace-nowrap text-right font-mono text-sm tnum" style={{ color: "var(--ink)" }}>
             {mode === "idr" ? idr(r.value) : num(r.value)}
+            {r.meta && <span className="ml-1.5 text-xs" style={{ color: "var(--ink-soft)" }}>· {r.meta}</span>}
           </div>
         </div>
       ))}
@@ -259,9 +278,11 @@ export function BarList({ rows, mode = "num" }: { rows: { name: string; value: n
 export function StackedMonths({ data, labels = ["New", "Returning"] }:
   { data: { label: string; a: number; b: number }[]; labels?: [string, string] | string[] }) {
   const { ref, tip, show, hide } = useTip();
-  const W = 720, H = 200, pad = { t: 12, r: 8, b: 24, l: 8 };
+  const W = 720, H = 200, pad = { t: 12, r: 8, b: 24, l: 40 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const max = Math.max(1, ...data.map((d) => d.a + d.b));
+  const yTicks = niceTicks(max);
+  const y = (v: number) => pad.t + ih - (v / max) * ih;
   const bw = (iw / data.length) * 0.62;
   const step = Math.ceil(data.length / 8);
   const cx = (i: number) => pad.l + (i + 0.5) * (iw / data.length);
@@ -285,6 +306,12 @@ export function StackedMonths({ data, labels = ["New", "Returning"] }:
     <div ref={ref} className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" role="img" aria-label="New vs returning customers per month"
         onPointerMove={onMove} onPointerLeave={hide}>
+        {yTicks.map((t, i) => (
+          <g key={i}>
+            <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="var(--grid)" strokeWidth="1" />
+            <text x={pad.l - 8} y={y(t) + 3} textAnchor="end" fontSize="10" fill="var(--ink-soft)" className="tnum">{num(t)}</text>
+          </g>
+        ))}
         {data.map((d, i) => {
           const hA = (d.a / max) * ih, hB = (d.b / max) * ih;
           return (

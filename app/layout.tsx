@@ -10,7 +10,8 @@ export const metadata: Metadata = {
   description: "Treelogy omnichannel sales dashboard — Shopee, Tokopedia, Shopify, offline.",
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
+// ?theme=light|dark forces a theme for that load (shareable / automatable); else stored preference
+const themeScript = `(function(){try{var q=new URLSearchParams(location.search).get('theme');var t=(q==='light'||q==='dark')?q:localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
