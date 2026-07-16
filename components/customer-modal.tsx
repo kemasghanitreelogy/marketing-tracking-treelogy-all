@@ -22,11 +22,18 @@ const STATUS_COLOR: Record<string, string> = { completed: "var(--good)", cancele
 
 const cache = new Map<number, C360>();
 
+// "2025-09-07" → "7 Sep '25" — full ISO dates overflow the narrow stat chips
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function shortDate(s?: string | null) {
+  if (!s || s.length < 10) return "—";
+  return `${+s.slice(8, 10)} ${MON[+s.slice(5, 7) - 1]} '${s.slice(2, 4)}`;
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg p-2.5" style={{ background: "var(--line-soft)" }}>
-      <div className="text-[0.6rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>{label}</div>
-      <div className="mt-0.5 whitespace-nowrap font-mono text-sm font-bold tnum">{value}</div>
+    <div className="min-w-0 rounded-lg p-2.5" style={{ background: "var(--line-soft)" }}>
+      <div className="truncate text-[0.6rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>{label}</div>
+      <div className="mt-0.5 truncate whitespace-nowrap font-mono text-sm font-bold tnum">{value}</div>
     </div>
   );
 }
@@ -101,8 +108,8 @@ export function Customer360Modal({ uid, name, onClose }: { uid: number; name: st
                 <Stat label="Orders" value={num(data.stats.total_orders)} />
                 <Stat label="Units" value={num(data.stats.total_units)} />
                 <Stat label="Avg/order" value={idr(data.stats.aov)} />
-                <Stat label="First" value={data.stats.first_order ?? "—"} />
-                <Stat label="Last" value={data.stats.last_order ?? "—"} />
+                <Stat label="First order" value={shortDate(data.stats.first_order)} />
+                <Stat label="Last order" value={shortDate(data.stats.last_order)} />
                 <Stat label="Recency" value={`${num(data.stats.recency_days)}d`} />
               </div>
 
