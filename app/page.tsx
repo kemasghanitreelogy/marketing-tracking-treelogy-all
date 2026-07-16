@@ -1,6 +1,7 @@
 import { sb, sbRpc } from "@/lib/supabase";
 import { num, idr, idrFull, monthLabel } from "@/lib/format";
-import { Card, SectionTitle } from "@/components/ui";
+import { SectionTitle } from "@/components/ui";
+import ExpandCard from "@/components/expand-card";
 import { AreaTrend, BarList, MultiTrend, StackedMonths, type TrendSeries } from "@/components/charts";
 import { DeltaKpi, InsightCards } from "@/components/cmo";
 import { CohortHeatmap, Pareto } from "@/components/cmo-charts";
@@ -145,6 +146,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
               Data Quality {dqScore}
             </span>
           )}
+          <a href="/how-it-works" className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="12" r="2.2" /><circle cx="19" cy="6" r="2.2" /><circle cx="19" cy="18" r="2.2" /><path d="M7 11l9.5-4.5" /><path d="M7 13l9.5 4.5" /></svg>
+            How this works
+          </a>
           <span className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "var(--brand)" }} /><span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} /></span>
             Live · {k.last_date}
@@ -184,7 +189,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
 
       {/* Growth: GMV + channel mix */}
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <ExpandCard label="Revenue Growth" className="lg:col-span-2">
           <SectionTitle title="Revenue Growth" hint={revSeries ? "Rp millions per month · one line per channel + all combined" : "Rp millions per month (actual + estimates for older data)"} />
           <GetInsight points={ins.trend} />
           {revSeries ? (
@@ -198,17 +203,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
               <span style={{ color: "var(--ink-soft)" }}>MTD {idr(rr.mtd_gmv)} · day {rr.days_elapsed}/{rr.days_in_month} · last month {idr(rr.prev_month_gmv)}</span>
             </div>
           )}
-        </Card>
-        <Card>
+        </ExpandCard>
+        <ExpandCard label="Channel Mix">
           <SectionTitle title="Channel Mix" hint="revenue per sales channel" />
           <GetInsight points={ins.channel} />
           <BarList rows={p.channels.slice(0, 8).map((c) => ({ name: c.channel, value: Number(c.gmv) }))} mode="idr" />
-        </Card>
+        </ExpandCard>
       </section>
 
       {/* Acquisition & Retention */}
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <ExpandCard label="Acquisition vs Retention" className="lg:col-span-2">
           <SectionTitle title="Acquisition vs Retention" hint="active customers per month" />
           <GetInsight points={ins.acq} />
           <div className="mb-3 flex gap-4 text-xs" style={{ color: "var(--ink-soft)" }}>
@@ -216,8 +221,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--brand)" }} /> Returning</span>
           </div>
           <StackedMonths data={p.monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
-        </Card>
-        <Card>
+        </ExpandCard>
+        <ExpandCard label="Average Spend per Order">
           <SectionTitle title="Average Spend per Order" hint={aovSeries ? "per month · one line per channel + all combined" : "per month"} />
           <GetInsight points={ins.aov} />
           {aovSeries ? (
@@ -226,27 +231,27 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
             <AreaTrend h={400} data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
           )}
           <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>Rp thousands spent per order</div>
-        </Card>
+        </ExpandCard>
       </section>
 
       {/* Cohort retention */}
       <section className="mt-4">
-        <Card>
+        <ExpandCard label="Do Customers Come Back?">
           <SectionTitle title="Do Customers Come Back?" hint="of customers who joined in a month, % who buy again 0–6 months later" />
           <GetInsight points={ins.cohort} />
           <CohortHeatmap rows={p.cohort} />
-        </Card>
+        </ExpandCard>
       </section>
 
       {/* Advanced tracking: geo + purchase time + seasonality */}
       <div className="mb-2 mt-6 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Advanced Tracking</div>
       <section className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+        <ExpandCard label="Revenue by Region" className="lg:col-span-3">
           <SectionTitle title="Revenue by Region" hint="map of Indonesia · hover for detail" />
           <GetInsight points={ins.geo} />
           <GeoTileMap rows={geoKnown} unknownShare={geoUnknownShare} />
-        </Card>
-        <Card className="lg:col-span-2">
+        </ExpandCard>
+        <ExpandCard label="Top Regions" className="lg:col-span-2">
           <SectionTitle title="Top Regions" hint="share of revenue" />
           <div className="flex flex-col gap-3.5">
             {geoKnown.slice(0, 8).map((g) => (
@@ -263,30 +268,30 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
               </div>
             ))}
           </div>
-        </Card>
+        </ExpandCard>
       </section>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
+        <ExpandCard label="Purchase Time Heatmap">
           <SectionTitle title="Purchase Time Heatmap" hint="orders by day × hour (WIB) · Apr 2026 onward" />
           <GetInsight points={ins.time} />
           <TimeHeatmap cells={p.time_heatmap} />
-        </Card>
-        <Card>
+        </ExpandCard>
+        <ExpandCard label="Product Seasonality">
           <SectionTitle title="Product Seasonality" hint="units by month · intensity relative to each product's peak" />
           <GetInsight points={ins.season} />
           <SeasonHeatmap cells={p.season} />
-        </Card>
+        </ExpandCard>
       </section>
 
       {/* RFM segments */}
       <section className="mt-4 grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+        <ExpandCard label="Customer Groups" className="lg:col-span-3">
           <SectionTitle title="Customer Groups" hint="grouped by how recently, how often & how much they buy · click a group to see who's in it & export" />
           <GetInsight points={ins.seg} />
           <SegmentPanel rows={p.segments} ch={channelsSel.join(",")} from={from ?? ""} to={to ?? ""} />
-        </Card>
-        <Card className="lg:col-span-2">
+        </ExpandCard>
+        <ExpandCard label="Actions per Segment" className="lg:col-span-2">
           <SectionTitle title="Actions per Segment" hint="recommendations" />
           <ul className="flex flex-col gap-2.5 text-sm" style={{ color: "var(--ink)" }}>
             <li className="flex gap-2"><span style={{ color: "var(--good)" }}>▲</span> <span><b>Champions</b> — reward & referral; retain with early access.</span></li>
@@ -295,12 +300,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
             <li className="flex gap-2"><span style={{ color: "#4FA3A3" }}>✦</span> <span><b>New / Promising</b> — onboarding & second-order nudge.</span></li>
             <li className="flex gap-2"><span style={{ color: "#8A7BA8" }}>◇</span> <span><b>Hibernating</b> — low-cost reactivation or let go.</span></li>
           </ul>
-        </Card>
+        </ExpandCard>
       </section>
 
       {/* Channel performance matrix + Pareto */}
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
+        <ExpandCard label="Channel Performance">
           <SectionTitle title="Channel Performance" hint="revenue · spend per order · customers" />
           <GetInsight points={ins.channel} />
           <div className="overflow-x-auto">
@@ -327,17 +332,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
               </tbody>
             </table>
           </div>
-        </Card>
-        <Card>
+        </ExpandCard>
+        <ExpandCard label="Which Products Earn the Money">
           <SectionTitle title="Which Products Earn the Money" hint="bars = revenue · line = running total %" />
           <GetInsight points={ins.pareto} />
           <Pareto rows={p.pareto} />
-        </Card>
+        </ExpandCard>
       </section>
 
       {/* LTV per acquisition channel + basket affinity */}
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
+        <ExpandCard label="Customer Value by First Channel">
           <SectionTitle title="Customer Value by First Channel" hint="how much a customer ends up spending, based on where they first bought" />
           <GetInsight points={ins.ltv} />
           <div className="overflow-x-auto">
@@ -364,8 +369,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
               </tbody>
             </table>
           </div>
-        </Card>
-        <Card>
+        </ExpandCard>
+        <ExpandCard label="Frequently Bought Together">
           <SectionTitle title="Frequently Bought Together" hint="bundling & cross-sell opportunities" />
           <GetInsight points={ins.aff} />
           <div className="flex flex-col gap-2.5">
@@ -383,16 +388,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
             ))}
           </div>
           <div className="mt-2 text-[0.68rem]" style={{ color: "var(--ink-soft)" }}>lift &gt; 1 = pairing occurs more often than chance — bundle candidates</div>
-        </Card>
+        </ExpandCard>
       </section>
 
       {/* Top customers — click a row for the Customer 360 modal */}
       <section className="mt-4">
-        <Card>
+        <ExpandCard label="Top Customers by Value">
           <SectionTitle title="Top Customers by Value" hint="by total spend · click a row for full detail" />
           <GetInsight points={ins.top} />
           <TopCustomersTable rows={p.top_customers} />
-        </Card>
+        </ExpandCard>
       </section>
 
       <footer className="mt-8 border-t pt-5 text-center text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>

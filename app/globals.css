@@ -76,6 +76,41 @@
   to { stroke-dashoffset: 0; }
 }
 
+/* /how-it-works pipeline story — all CSS animations below die under reduced-motion;
+   SMIL packets are gated in JS via matchMedia instead. */
+.pipe-hidden { opacity: 0; transform: translateY(16px); }
+.pipe-in { opacity: 1; transform: none; transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+.pipe-packet {
+  position: absolute; left: 50%; width: 6px; height: 6px; margin-left: -3px;
+  border-radius: 9999px; background: var(--brand);
+  box-shadow: 0 0 10px var(--brand), 0 0 3px var(--brand);
+  animation: pipe-fall 3.4s linear infinite;
+}
+@keyframes pipe-fall {
+  0% { top: -2%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.pipe-ring::after {
+  content: ""; position: absolute; inset: 0; border-radius: 9999px;
+  border: 2px solid var(--brand);
+  animation: pipe-ring var(--ring-dur, 3s) ease-out infinite;
+}
+@keyframes pipe-ring {
+  0% { transform: scale(0.55); opacity: 0.9; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+@keyframes pipe-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pipe-hidden { opacity: 1; transform: none; }
+  .pipe-packet { display: none; }
+  .pipe-ring::after { display: none; }
+}
+
 html { -webkit-text-size-adjust: 100%; }
 body {
   background: var(--bg);
