@@ -237,7 +237,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* Cohort retention */}
       <section className="mt-4">
         <ExpandCard label="Do Customers Come Back?">
-          <SectionTitle title="Do Customers Come Back?" hint="of customers who joined in a month, % who buy again 0–6 months later" />
+          <SectionTitle title="Do Customers Come Back?" hint="follow each month's new customers — how many of them buy again later" />
           <GetInsight points={ins.cohort} />
           <CohortHeatmap rows={p.cohort} />
         </ExpandCard>

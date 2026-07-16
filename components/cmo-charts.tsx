@@ -5,57 +5,129 @@ import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { useTip, TipBox, TipTitle, TipRow } from "@/components/tooltip";
 
 // ===== Cohort retention heatmap =====
+// Written for non-analysts: a plain-language takeaway on top, a "typical month"
+// benchmark row, no M0 column (it's 100% by definition), "+N mo" headers, and a
+// visible difference between "not enough time yet" (·) and "nobody came back" (0%).
 type CohortRow = { cohort: string; months_since: number; retention_pct: number; retained: number; cohort_size: number };
+const SMALL_COHORT = 50; // fewer people than this → percentages are noise, not signal
+
 export function CohortHeatmap({ rows }: { rows: CohortRow[] }) {
   const { ref, tip, show, hide } = useTip();
   const cohorts = [...new Set(rows.map((r) => r.cohort))].sort();
+  const last = cohorts[cohorts.length - 1] ?? "";
   const maxCol = 6;
   const map = new Map<string, { pct: number; retained: number }>();
   const size = new Map<string, number>();
   for (const r of rows) { map.set(`${r.cohort}:${r.months_since}`, { pct: r.retention_pct, retained: r.retained }); size.set(r.cohort, r.cohort_size); }
-  const cellStyle = (pct: number | undefined) => {
-    if (pct === undefined) return { background: "transparent", color: "var(--ink-soft)" };
-    const a = Math.max(0.06, Math.min(1, pct / 60));
-    return { background: `color-mix(in srgb, var(--brand) ${Math.round(a * 100)}%, transparent)`, color: a > 0.5 ? "#fff" : "var(--ink)" };
+
+  const addM = (ym: string, n: number) => {
+    const [y, m] = ym.split("-").map(Number);
+    const t = y * 12 + (m - 1) + n;
+    return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
   };
+  const isFuture = (co: string, i: number) => addM(co, i) > last;
+
+  // benchmark: weighted average per month-offset across readable cohorts
+  const typical: (number | null)[] = Array.from({ length: maxCol }, (_, k) => {
+    const i = k + 1;
+    let ret = 0, den = 0;
+    for (const co of cohorts) {
+      const sz = size.get(co) ?? 0;
+      if (sz < SMALL_COHORT || isFuture(co, i)) continue;
+      ret += map.get(`${co}:${i}`)?.retained ?? 0;
+      den += sz;
+    }
+    return den ? Math.round((1000 * ret) / den) / 10 : null;
+  });
+  const m1 = typical[0], m3 = typical[2];
+
+  // normalize the heat to the real data range so small differences stay visible
+  const heatMax = Math.max(8, ...rows.filter((r) => r.months_since >= 1 && (size.get(r.cohort) ?? 0) >= SMALL_COHORT).map((r) => Number(r.retention_pct)));
+  const cellStyle = (pct: number | undefined) => {
+    if (pct === undefined) return { background: "var(--line-soft)", color: "var(--ink-soft)" };
+    const a = Math.max(0.07, Math.min(1, pct / heatMax));
+    return { background: `color-mix(in srgb, var(--brand) ${Math.round(a * 88)}%, transparent)`, color: a > 0.55 ? "#fff" : "var(--ink)" };
+  };
+
   return (
-    <div ref={ref} className="relative overflow-x-auto">
-      <table className="w-full border-separate text-xs" style={{ borderSpacing: "3px", minWidth: 560 }}>
-        <thead>
-          <tr>
-            <th className="text-left font-semibold" style={{ color: "var(--ink-soft)" }}>Cohort</th>
-            <th className="font-semibold" style={{ color: "var(--ink-soft)" }}>Size</th>
-            {Array.from({ length: maxCol + 1 }, (_, i) => (
-              <th key={i} className="font-semibold tnum" style={{ color: "var(--ink-soft)" }}>M{i}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {cohorts.map((co) => (
-            <tr key={co}>
-              <td className="whitespace-nowrap pr-2 font-medium">{monthLabel(co)}</td>
-              <td className="text-center font-mono tnum" style={{ color: "var(--ink-soft)" }}>{num(size.get(co) ?? 0)}</td>
-              {Array.from({ length: maxCol + 1 }, (_, i) => {
-                const c = map.get(`${co}:${i}`);
-                const s = cellStyle(c?.pct);
-                return (
-                  <td key={i} className="cursor-default rounded text-center font-mono tnum"
-                    style={{ ...s, padding: "6px 4px", minWidth: 44 }}
-                    onPointerMove={c ? (e) => show(e, (
-                      <div>
-                        <TipTitle>{monthLabel(co)} cohort · month {i}</TipTitle>
-                        <TipRow swatch="var(--brand)" label="Retained" value={`${num(c.retained)} of ${num(size.get(co) ?? 0)}`} />
-                        <TipRow label="Retention" value={`${c.pct}%`} />
-                      </div>
-                    )) : undefined}
-                    onPointerLeave={hide}
-                  >{c ? `${c.pct}%` : ""}</td>
-                );
-              })}
+    <div ref={ref} className="relative">
+      {/* the takeaway, in words first */}
+      {m1 != null && (
+        <p className="mb-3 max-w-2xl text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+          For every <b style={{ color: "var(--ink)" }}>100 customers</b> who join, about{" "}
+          <b className="font-mono tnum" style={{ color: "var(--brand-ink)" }}>{Math.round(m1)}</b> buy again the very next month
+          {m3 != null && <> and about <b className="font-mono tnum" style={{ color: "var(--brand-ink)" }}>{Math.round(m3)}</b> are still coming back 3 months in</>}.
+          Each row below follows one joining month — greener means more of them came back.
+        </p>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full border-separate text-xs" style={{ borderSpacing: "3px", minWidth: 560 }}>
+          <thead>
+            <tr>
+              <th className="text-left font-semibold" style={{ color: "var(--ink-soft)" }}>Joined in</th>
+              <th className="text-right font-semibold" style={{ color: "var(--ink-soft)" }}>People</th>
+              {Array.from({ length: maxCol }, (_, k) => (
+                <th key={k} className="font-semibold tnum" style={{ color: "var(--ink-soft)" }}>+{k + 1} mo</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {/* benchmark row — the number to compare everything else against */}
+            <tr>
+              <td className="whitespace-nowrap pr-2 font-bold">Typical month</td>
+              <td className="text-right font-mono tnum" style={{ color: "var(--ink-soft)" }}>avg</td>
+              {typical.map((t, k) => (
+                <td key={k} className="cursor-default rounded text-center font-mono font-bold tnum"
+                  style={{ ...(t == null ? { color: "var(--ink-soft)" } : cellStyle(t)), padding: "6px 4px", minWidth: 44, boxShadow: "inset 0 0 0 1px var(--line)" }}
+                  onPointerMove={t == null ? undefined : (e) => show(e, (
+                    <div>
+                      <TipTitle>Typical month · {k + 1} month{k ? "s" : ""} after joining</TipTitle>
+                      <TipRow swatch="var(--brand)" label="Come back" value={`${t}% — about ${Math.round(t)} in 100`} />
+                    </div>
+                  ))}
+                  onPointerLeave={hide}
+                >{t == null ? "" : `${t}%`}</td>
+              ))}
+            </tr>
+            {cohorts.map((co) => {
+              const sz = size.get(co) ?? 0;
+              const small = sz < SMALL_COHORT;
+              return (
+                <tr key={co} style={small ? { opacity: 0.4 } : undefined}>
+                  <td className="whitespace-nowrap pr-2 font-medium">{monthLabel(co)}</td>
+                  <td className="text-right font-mono tnum" style={{ color: "var(--ink-soft)" }}>{num(sz)}</td>
+                  {Array.from({ length: maxCol }, (_, k) => {
+                    const i = k + 1;
+                    const future = isFuture(co, i);
+                    const c = map.get(`${co}:${i}`);
+                    const pct = future ? undefined : (c?.pct ?? 0);
+                    const s = future ? { background: "transparent", color: "var(--ink-soft)" } : cellStyle(pct);
+                    return (
+                      <td key={i} className="cursor-default rounded text-center font-mono tnum"
+                        style={{ ...s, padding: "6px 4px", minWidth: 44 }}
+                        onPointerMove={future ? undefined : (e) => show(e, (
+                          <div>
+                            <TipTitle>Joined {monthLabel(co)} · {i} month{i > 1 ? "s" : ""} later</TipTitle>
+                            <TipRow swatch="var(--brand)" label="Came back" value={`${num(c?.retained ?? 0)} of ${num(sz)} people`} />
+                            <TipRow label="That's" value={`${pct}%`} />
+                            {small && <div className="mt-1 max-w-[200px] whitespace-normal text-[0.65rem]" style={{ color: "var(--ink-soft)" }}>Only {num(sz)} people joined this month — too few to read much into.</div>}
+                          </div>
+                        ))}
+                        onPointerLeave={hide}
+                      >{future ? "·" : `${pct}%`}</td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.66rem]" style={{ color: "var(--ink-soft)" }}>
+        <span>· = not enough time has passed yet</span>
+        <span>0% = nobody came back that month</span>
+        <span>faded rows = too few people to be meaningful</span>
+      </div>
       <TipBox tip={tip} />
     </div>
   );
