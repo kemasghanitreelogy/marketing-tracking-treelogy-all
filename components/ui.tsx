@@ -32,10 +32,10 @@ export function Kpi({ label, value, sub, accent }: { label: string; value: strin
 export function SectionTitle({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="mb-4 flex items-baseline justify-between gap-3">
-      <h2 className="text-[0.95rem] font-bold tracking-tight" style={{ color: "var(--ink)" }}>
+      <h2 className="shrink-0 whitespace-nowrap text-[0.95rem] font-bold tracking-tight" style={{ color: "var(--ink)" }}>
         {title}
       </h2>
-      {hint && <span className="text-xs" style={{ color: "var(--ink-soft)" }}>{hint}</span>}
+      {hint && <span className="min-w-0 text-right text-xs" style={{ color: "var(--ink-soft)" }}>{hint}</span>}
     </div>
   );
 }

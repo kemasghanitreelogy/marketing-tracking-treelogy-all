@@ -188,14 +188,14 @@ export default function SegmentPanel({ rows, ch, from = "", to = "" }: { rows: S
   const [open, setOpen] = useState<Seg | null>(null);
   const max = Math.max(1, ...rows.map((r) => Number(r.gmv_share)));
   return (
-    <div ref={ref} className="relative flex flex-col gap-3">
+    <div ref={ref} className="relative flex flex-col gap-1">
       {rows.map((s) => {
         const col = SEG_COLOR[s.segment] ?? "var(--brand)";
         return (
           <div key={s.segment} tabIndex={0} role="button" aria-label={`Explore segment ${s.segment}`}
             onClick={() => { hide(); setOpen(s); }}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hide(); setOpen(s); } }}
-            className="group cursor-pointer rounded-md px-1 outline-none transition-colors hover:bg-[var(--line-soft)] focus-visible:bg-[var(--line-soft)]"
+            className="group grid cursor-pointer grid-cols-[minmax(0,11.5rem)_1fr_auto] items-center gap-x-4 rounded-lg px-2 py-2 outline-none transition-colors hover:bg-[var(--line-soft)] focus-visible:bg-[var(--line-soft)]"
             onPointerMove={(e) => show(e, (
               <div>
                 <TipTitle>{s.segment}</TipTitle>
@@ -207,18 +207,25 @@ export default function SegmentPanel({ rows, ch, from = "", to = "" }: { rows: S
               </div>
             ))}
             onPointerLeave={hide}>
-            <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-              <span className="flex items-center gap-2 font-semibold">
-                <i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: col }} />{s.segment}
-                <svg className="opacity-0 transition-opacity group-hover:opacity-100" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7" /><path d="M8 7h9v9" /></svg>
-              </span>
-              <span className="tnum" style={{ color: "var(--ink-soft)" }}>{num(s.customers)} cust · {num(s.avg_recency_days)}d · {s.avg_orders}× orders</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative h-5 flex-1 overflow-hidden rounded-md" style={{ background: "var(--line-soft)" }}>
-                <div className="h-full rounded-md" style={{ width: `${(Number(s.gmv_share) / max) * 100}%`, background: col, opacity: 0.9 }} />
+            {/* col 1 — identity: name on top, quiet meta beneath (aligned left edge) */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm font-semibold leading-tight">
+                <i className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: col }} />
+                <span className="truncate">{s.segment}</span>
+                <svg className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7" /><path d="M8 7h9v9" /></svg>
               </div>
-              <span className="w-28 shrink-0 whitespace-nowrap text-right font-mono text-sm tnum">{idr(s.gmv)} · {s.gmv_share}%</span>
+              <div className="mt-0.5 truncate pl-[1.125rem] font-mono text-[0.66rem] tnum" style={{ color: "var(--ink-soft)" }}>
+                {num(s.customers)} cust · {s.avg_orders}× · {num(s.avg_recency_days)}d
+              </div>
+            </div>
+            {/* col 2 — slim bar, one shared axis across rows */}
+            <div className="relative h-3 overflow-hidden rounded-full" style={{ background: "var(--line-soft)" }}>
+              <div className="h-full rounded-full" style={{ width: `${(Number(s.gmv_share) / max) * 100}%`, background: col, opacity: 0.9 }} />
+            </div>
+            {/* col 3 — value + share stacked, right-aligned mono column */}
+            <div className="min-w-[5rem] text-right">
+              <div className="whitespace-nowrap font-mono text-sm font-semibold leading-tight tnum">{idr(s.gmv)}</div>
+              <div className="font-mono text-[0.66rem] tnum" style={{ color: "var(--ink-soft)" }}>{s.gmv_share}%</div>
             </div>
           </div>
         );
