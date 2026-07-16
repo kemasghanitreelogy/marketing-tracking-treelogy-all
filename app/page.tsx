@@ -76,9 +76,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
   const allChannels = chanList.map((c) => c.channel);
   const periodLabel = from || to ? `${from ?? "start"} → ${to ?? "today"}` : "";
 
-  // >1 channel selected → the monthly trends split into one line per channel + a combined line
+  // more than one channel in view ("All" = every channel, or ≥2 selected) → the monthly
+  // trends split into one line per channel + a combined line; exactly 1 selected stays single-line
   let revSeries: TrendSeries[] | null = null, aovSeries: TrendSeries[] | null = null;
-  if (channelsSel.length > 1 && p.monthly_by_channel?.length) {
+  if (channelsSel.length !== 1 && p.monthly_by_channel?.length) {
     const byCh = new Map<string, Map<string, { gmv: string; aov: string }>>();
     for (const r of p.monthly_by_channel) {
       if (!byCh.has(r.channel)) byCh.set(r.channel, new Map());
@@ -101,8 +102,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         }),
       })),
     ];
-    revSeries = build("gmv", 1e6);
-    aovSeries = build("aov", 1e3);
+    if (chans.length > 1) {
+      revSeries = build("gmv", 1e6);
+      aovSeries = build("aov", 1e3);
+    }
   }
 
   // per-section insights, computed from the SAME filtered payload the charts render
@@ -178,7 +181,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* Growth: GMV + channel mix */}
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <SectionTitle title="Revenue Growth" hint={revSeries ? "Rp millions per month · one line per selected channel + all combined" : "Rp millions per month (actual + estimates for older data)"} />
+          <SectionTitle title="Revenue Growth" hint={revSeries ? "Rp millions per month · one line per channel + all combined" : "Rp millions per month (actual + estimates for older data)"} />
           <GetInsight points={ins.trend} />
           {revSeries ? (
             <MultiTrend series={revSeries} />
@@ -211,7 +214,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           <StackedMonths data={p.monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
         </Card>
         <Card>
-          <SectionTitle title="Average Spend per Order" hint={aovSeries ? "per month · one line per selected channel + all combined" : "per month"} />
+          <SectionTitle title="Average Spend per Order" hint={aovSeries ? "per month · one line per channel + all combined" : "per month"} />
           <GetInsight points={ins.aov} />
           {aovSeries ? (
             <MultiTrend w={430} h={380} endLabels={false} series={aovSeries} />
