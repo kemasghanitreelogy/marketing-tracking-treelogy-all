@@ -9,8 +9,8 @@ function Arrow({ up }: { up: boolean }) {
   );
 }
 
-export function DeltaKpi({ label, value, cur, prev, invert = false, mono = true }:
-  { label: string; value: string; cur: number; prev: number; invert?: boolean; mono?: boolean }) {
+export function DeltaKpi({ label, value, cur, prev, invert = false, mono = true, days = 30 }:
+  { label: string; value: string; cur: number; prev: number; invert?: boolean; mono?: boolean; days?: number }) {
   const d = prev ? ((cur - prev) / prev) * 100 : 0;
   const up = d >= 0;
   const good = invert ? !up : up;
@@ -22,7 +22,7 @@ export function DeltaKpi({ label, value, cur, prev, invert = false, mono = true 
       <div className="mt-2.5 flex items-center gap-1 whitespace-nowrap text-xs font-semibold tnum" style={{ color }}>
         <Arrow up={up} /><span>{up ? "+" : ""}{d.toFixed(1)}%</span>
       </div>
-      <div className="mt-0.5 text-[0.62rem]" style={{ color: "var(--ink-soft)" }}>vs previous 30 days</div>
+      <div className="mt-0.5 text-[0.62rem]" style={{ color: "var(--ink-soft)" }}>vs previous {days} days</div>
     </Card>
   );
 }

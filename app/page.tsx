@@ -9,6 +9,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import TopCustomersTable from "@/components/customer-modal";
 import { GeoTileMap, TimeHeatmap, SeasonHeatmap } from "@/components/heatmaps";
 import ChannelFilter from "@/components/channel-filter";
+import KpiWindow from "@/components/kpi-window";
+import { KPI_WINDOWS } from "@/lib/kpi";
 import GetInsight from "@/components/get-insight";
 import {
   trendInsights, channelInsights, acqInsights, aovInsights, cohortInsights,
@@ -46,16 +48,18 @@ const CH_COLOR: Record<string, string> = {
   "TikTok Shop": "var(--viz-magenta)",
 };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string; from?: string; to?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string; from?: string; to?: string; win?: string }> }) {
   const sp = await searchParams;
   // canonical (sorted) order → same combo always hits the same cache entry
   const channelsSel = (sp.ch ?? "").split(",").map((s) => s.trim()).filter(Boolean).sort();
   const from = DATE_RE.test(sp.from ?? "") ? sp.from! : null;
   const to = DATE_RE.test(sp.to ?? "") ? sp.to! : null;
+  const kpiDays = (KPI_WINDOWS as readonly number[]).includes(Number(sp.win)) ? Number(sp.win) : 30;
   const rpcArgs: Record<string, unknown> = {};
   if (channelsSel.length) rpcArgs.p_channels = channelsSel;
   if (from) rpcArgs.p_from = from;
   if (to) rpcArgs.p_to = to;
+  if (kpiDays !== 30) rpcArgs.p_kpi_days = kpiDays; // omit the default → one cache entry per real combo
 
   let [p, dq, chanList] = await Promise.all([
     sbRpc<Payload>("dash_payload", rpcArgs),
@@ -162,17 +166,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         <InsightCards rows={p.insights ?? []} />
       </section>
 
-      {/* Executive KPIs — rolling 30 days vs prior 30 days */}
-      <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-        Last 30 Days Performance{periodLabel ? ` · ending ${k.last_date}` : ""}
+      {/* Executive KPIs — rolling N days vs the prior N days (switcher scopes this section only) */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
+          Last {kpiDays} Days Performance{periodLabel ? ` · ending ${k.last_date}` : ""}
+        </div>
+        <KpiWindow />
       </div>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <DeltaKpi label="Revenue" value={idr(k.gmv_cur)} cur={k.gmv_cur} prev={k.gmv_prev} />
-        <DeltaKpi label="Orders" value={num(k.ord_cur)} cur={k.ord_cur} prev={k.ord_prev} />
-        <DeltaKpi label="Avg per Order" value={idr(k.aov_cur)} cur={k.aov_cur} prev={k.aov_prev} />
-        <DeltaKpi label="New Customers" value={num(k.new_cur)} cur={k.new_cur} prev={k.new_prev} />
-        <DeltaKpi label="Active Customers" value={num(k.act_cur)} cur={k.act_cur} prev={k.act_prev} />
-        <DeltaKpi label="Repeat Rate" value={`${repeatCur}%`} cur={repeatCur} prev={repeatPrev} />
+        <DeltaKpi label="Revenue" value={idr(k.gmv_cur)} cur={k.gmv_cur} prev={k.gmv_prev} days={kpiDays} />
+        <DeltaKpi label="Orders" value={num(k.ord_cur)} cur={k.ord_cur} prev={k.ord_prev} days={kpiDays} />
+        <DeltaKpi label="Avg per Order" value={idr(k.aov_cur)} cur={k.aov_cur} prev={k.aov_prev} days={kpiDays} />
+        <DeltaKpi label="New Customers" value={num(k.new_cur)} cur={k.new_cur} prev={k.new_prev} days={kpiDays} />
+        <DeltaKpi label="Active Customers" value={num(k.act_cur)} cur={k.act_cur} prev={k.act_prev} days={kpiDays} />
+        <DeltaKpi label="Repeat Rate" value={`${repeatCur}%`} cur={repeatCur} prev={repeatPrev} days={kpiDays} />
       </section>
 
       {/* Growth: GMV + channel mix */}
