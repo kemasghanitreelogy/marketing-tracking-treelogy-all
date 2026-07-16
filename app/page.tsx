@@ -135,9 +135,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-[1.7rem]">CMO Decision Summary</h1>
         </div>
         <div className="flex items-center gap-3">
-          <a href="/review" className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--line-soft)]" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
-            Identity review
-          </a>
           {dqScore !== null && (
             <span className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: "var(--line)", color: dqScore >= 99 ? "var(--good)" : "var(--accent)" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>
