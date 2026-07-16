@@ -103,7 +103,8 @@ export function Customer360Modal({ uid, name, onClose }: { uid: number; name: st
           {data && (
             <div className="flex flex-col gap-5">
               {/* KPIs */}
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {/* 7 stats wrap 4+3 — cramming them into one row truncated the values */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <Stat label="Total spent" value={idr(data.stats.total_gmv)} />
                 <Stat label="Orders" value={num(data.stats.total_orders)} />
                 <Stat label="Units" value={num(data.stats.total_units)} />
