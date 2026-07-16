@@ -17,6 +17,12 @@
   --good: #2e7d46;
   --bad: #c0392b;
   --grid: rgba(27, 36, 28, 0.06);
+  /* multi-series chart palette — validated (CVD + contrast) against the light surface */
+  --viz-all: #2e8b4f;
+  --viz-blue: #2a78d6;
+  --viz-orange: #eb6834;
+  --viz-violet: #4a3aa7;
+  --viz-magenta: #d55181;
 }
 :root[data-theme="dark"] {
   --bg: #0d100c;
@@ -33,6 +39,12 @@
   --good: #6ddf8f;
   --bad: #ef6a5a;
   --grid: rgba(255, 255, 255, 0.06);
+  /* same hues re-stepped for the dark surface — validated as a set */
+  --viz-all: #47a161;
+  --viz-blue: #3987e5;
+  --viz-orange: #d95926;
+  --viz-violet: #9085e9;
+  --viz-magenta: #d55181;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -50,7 +62,18 @@
     --good: #6ddf8f;
     --bad: #ef6a5a;
     --grid: rgba(255, 255, 255, 0.06);
+    --viz-all: #47a161;
+    --viz-blue: #3987e5;
+    --viz-orange: #d95926;
+    --viz-violet: #9085e9;
+    --viz-magenta: #d55181;
   }
+}
+
+/* line-draw entry animation for multi-series trends (killed by the reduced-motion rule below) */
+@keyframes viz-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 
 html { -webkit-text-size-adjust: 100%; }

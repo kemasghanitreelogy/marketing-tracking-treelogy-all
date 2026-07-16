@@ -1,7 +1,7 @@
 import { sb, sbRpc } from "@/lib/supabase";
 import { num, idr, idrFull, monthLabel } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
-import { AreaTrend, BarList, StackedMonths } from "@/components/charts";
+import { AreaTrend, BarList, MultiTrend, StackedMonths, type TrendSeries } from "@/components/charts";
 import { DeltaKpi, InsightCards } from "@/components/cmo";
 import { CohortHeatmap, Pareto } from "@/components/cmo-charts";
 import SegmentPanel from "@/components/segments";
@@ -21,6 +21,7 @@ type Payload = {
   kpi: Kpi;
   runrate: { mtd_gmv: string; days_elapsed: number; days_in_month: number; projected_gmv: string; prev_month_gmv: string };
   monthly: { ym: string; orders: number; units: number; gmv: string; aov: string; new_customers: number; returning_customers: number }[];
+  monthly_by_channel: { ym: string; channel: string; orders: number; gmv: string; aov: string }[];
   channels: { channel: string; orders: number; units: number; gmv: string; aov: string; customers: number; gmv_share: number }[];
   cohort: { cohort: string; months_since: number; retention_pct: number; retained: number; cohort_size: number }[];
   segments: { segment: string; customers: number; gmv: string; gmv_share: number; avg_orders: number; avg_recency_days: number }[];
@@ -36,6 +37,14 @@ type Payload = {
 type DqRow = { check_key: string; score: string };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// fixed color per channel (never repainted by filter changes) — CVD-validated --viz-* palette
+const CH_COLOR: Record<string, string> = {
+  Tokopedia: "var(--viz-blue)",
+  Shopee: "var(--viz-orange)",
+  Shopify: "var(--viz-violet)",
+  "TikTok Shop": "var(--viz-magenta)",
+};
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ch?: string; from?: string; to?: string }> }) {
   const sp = await searchParams;
@@ -54,7 +63,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
     sb<{ channel: string }[]>("cmo_channel?select=channel", 600),
   ]);
   // cached entry predates a payload-shape change → bypass cache once for a complete payload
-  if (!p?.insights) p = await sbRpc<Payload>("dash_payload", rpcArgs, 0);
+  if (!p?.insights || !p?.monthly_by_channel) p = await sbRpc<Payload>("dash_payload", rpcArgs, 0);
 
   const k = p.kpi;
   const rr = p.runrate;
@@ -66,6 +75,35 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
   const geoUnknownShare = Number(p.geo.find((g) => g.province === "Unknown")?.gmv_share ?? 0);
   const allChannels = chanList.map((c) => c.channel);
   const periodLabel = from || to ? `${from ?? "start"} → ${to ?? "today"}` : "";
+
+  // >1 channel selected → the monthly trends split into one line per channel + a combined line
+  let revSeries: TrendSeries[] | null = null, aovSeries: TrendSeries[] | null = null;
+  if (channelsSel.length > 1 && p.monthly_by_channel?.length) {
+    const byCh = new Map<string, Map<string, { gmv: string; aov: string }>>();
+    for (const r of p.monthly_by_channel) {
+      if (!byCh.has(r.channel)) byCh.set(r.channel, new Map());
+      byCh.get(r.channel)!.set(r.ym, r);
+    }
+    const chTotal = (ch: string) => [...byCh.get(ch)!.values()].reduce((s, r) => s + Number(r.gmv), 0);
+    const chans = [...byCh.keys()].sort((a, b) => chTotal(b) - chTotal(a));
+    const build = (metric: "gmv" | "aov", div: number): TrendSeries[] => [
+      {
+        name: "All channels", color: "var(--viz-all)", emphasis: true,
+        data: p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m[metric]) / div), display: idrFull(m[metric]) })),
+      },
+      ...chans.map((ch) => ({
+        name: ch, color: CH_COLOR[ch] ?? "var(--accent)",
+        data: p.monthly.map((m) => {
+          const r = byCh.get(ch)!.get(m.ym);
+          // no orders that month: revenue is a true 0, but an average per order doesn't exist → gap
+          if (!r) return { label: monthLabel(m.ym), value: metric === "gmv" ? 0 : null, display: metric === "gmv" ? idrFull(0) : undefined };
+          return { label: monthLabel(m.ym), value: Math.round(Number(r[metric]) / div), display: idrFull(r[metric]) };
+        }),
+      })),
+    ];
+    revSeries = build("gmv", 1e6);
+    aovSeries = build("aov", 1e3);
+  }
 
   // per-section insights, computed from the SAME filtered payload the charts render
   const ins = {
@@ -140,9 +178,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       {/* Growth: GMV + channel mix */}
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <SectionTitle title="Revenue Growth" hint="Rp millions per month (actual + estimates for older data)" />
+          <SectionTitle title="Revenue Growth" hint={revSeries ? "Rp millions per month · one line per selected channel + all combined" : "Rp millions per month (actual + estimates for older data)"} />
           <GetInsight points={ins.trend} />
-          <AreaTrend data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6), display: idrFull(m.gmv) }))} />
+          {revSeries ? (
+            <MultiTrend series={revSeries} />
+          ) : (
+            <AreaTrend data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.gmv) / 1e6), display: idrFull(m.gmv) }))} />
+          )}
           {rr && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
               <span className="font-semibold">On pace for this month: {idr(rr.projected_gmv)}</span>
@@ -169,9 +211,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           <StackedMonths data={p.monthly.map((m) => ({ label: monthLabel(m.ym), a: Number(m.new_customers), b: Number(m.returning_customers) }))} />
         </Card>
         <Card>
-          <SectionTitle title="Average Spend per Order" hint="per month" />
+          <SectionTitle title="Average Spend per Order" hint={aovSeries ? "per month · one line per selected channel + all combined" : "per month"} />
           <GetInsight points={ins.aov} />
-          <AreaTrend h={400} data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
+          {aovSeries ? (
+            <MultiTrend w={430} h={380} endLabels={false} series={aovSeries} />
+          ) : (
+            <AreaTrend h={400} data={p.monthly.map((m) => ({ label: monthLabel(m.ym), value: Math.round(Number(m.aov) / 1e3), display: idrFull(m.aov) }))} />
+          )}
           <div className="mt-1 text-[0.7rem]" style={{ color: "var(--ink-soft)" }}>Rp thousands spent per order</div>
         </Card>
       </section>

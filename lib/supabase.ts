@@ -3,7 +3,7 @@ const KEY = process.env.SUPABASE_SERVICE_KEY ?? "";
 
 // Bump when RPC output text/shape changes: the header is part of the Next data-cache
 // key, so all stale per-filter-combo entries are invalidated at once on deploy.
-const PAYLOAD_V = "3";
+const PAYLOAD_V = "4";
 
 // POST an RPC (PostgREST). Cached per (fn, args) combo via the Next data cache,
 // so repeat channel-filter toggles are served instantly; fresh data every 5 min.
